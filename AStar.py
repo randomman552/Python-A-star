@@ -1,3 +1,4 @@
+#!/usr/bib/python3
 from queue import PriorityQueue
 import itertools
 import random
