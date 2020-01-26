@@ -92,7 +92,7 @@ class tile(object):
     x_pos and y_pos are the position of the tile."""
     def __init__(self, window, size, x_pos, y_pos):
         self.enabled = True
-        self.state = "normal"
+        self.state = 0
         self.window = window
         self.size = size
         self.x_pos = x_pos
@@ -102,7 +102,7 @@ class tile(object):
     def draw(self):
         "Draw the tile on the pygame window"
         if self.enabled:
-            if self.state.lower() == "normal":
+            if self.state == 0:
                 pygame.draw.rect(self.window, self.color, (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
             else:
                 pygame.draw.rect(self.window, (255,0,255), (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
@@ -121,17 +121,20 @@ class MapCreationWindow(object):
         self.Manager = multiprocessing.Manager()
         self.path = self.Manager.list([])
         self.visited_queue = self.Manager.list([])
-        self.Process = process(self.path, self.visited_queue)
-        self.Process_Run = False
+        self.Process = None
+        self.__nav_num = 0
         self.tile_list = self.__create_tiles()
+        self.updated_tiles = []
 
     def reset(self):
         "Reset the map to its default state"
         self.path = self.Manager.list([])
         self.visited_queue = self.Manager.list([])
-        self.Process = process(self.path, self.visited_queue)
+        self.Process = None
         self.Process_Run = False
         self.tile_list = self.__create_tiles()
+        self.__nav_num = 0
+        self.updated_tiles = []
 
     def __create_tiles(self):
         "Create the tileList variable filled with tile objects. Each tile represents a portion of the screen."
@@ -143,13 +146,20 @@ class MapCreationWindow(object):
                 tile_list.append(tile(self.window, tileSize, borderSize // 2 + x * tileSize, borderSize // 2 + y * tileSize))
         return tile_list
 
+    def get_tile_coords(self, pos):
+        "When given an x and y coordinate in the form (x,y) will return the coords of the tile that occupies that space."
+        tile_x = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
+        tile_y = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
+        return [tile_x, tile_y]
+
     def get_cur_tile(self, pos):
         "When given an x and y coordinate in the form (x,y), will return the tile that occupies that position."
         #If the cursor is in the lower border, return None to prevent the changing of the opposite tiles
         if pos[0] < borderSize // 2 or pos[1] < borderSize // 2:
             return None
-        tile_x = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
-        tile_y = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
+        coords = self.get_tile_coords(pos)
+        tile_x = coords[0]
+        tile_y = coords[1]
         return self.get_tile(tile_x, tile_y)
 
     def get_tile(self, x, y):
@@ -170,10 +180,10 @@ class MapCreationWindow(object):
                 tile.enabled = False
             elif mousePresses[1]:
                 tile.enabled = True
-                tile.state = "n"
+                tile.state = self.__nav_num
+                self.__nav_num += 1
             elif mousePresses[2]:
                 tile.enabled = True
-                tile.color = (255,255,255)
         
     def key_handler(self):
         "Handles key presses."
@@ -185,19 +195,50 @@ class MapCreationWindow(object):
         elif keyPresses[pygame.K_RETURN]:
             self.start_pathfinding()
     
+    def __generate_inital_forbidden(self):
+        "Generates the intial forbidden tiles (form a sort of border around the edge of the map)."
+        forbidden = []
+        for x in range(self.__x_tiles + 1):
+            forbidden.append([x, 0])
+            forbidden.append([x, self.__y_tiles + 1])
+        for y in range(self.__y_tiles + 1):
+            forbidden.append([0, y])
+            forbidden.append([self.__x_tiles + 1, y])
+        return forbidden
+
     def start_pathfinding(self):
         "Initialise the A* pathfinding algorithm"
-        if not self.Process_Run:
+        if self.Process == None:
+            allowed_list = []
+            forbidden_list = []
+            nav_nodes = []
+            for tile in self.tile_list:
+                if tile.enabled:
+                    allowed_list.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
+                    if tile.state > 0:
+                        nav_nodes.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
+                else:
+                    forbidden_list.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
+            start = nav_nodes[0]
+            goal = nav_nodes[1]
+            self.Process = process(start, goal, self.path, self.visited_queue, allowed_list, forbidden_list)
             self.Process.start()
-            self.Process_Run = True
     
-    def Solve(self):
-        AStarSolver = AStar.Movement_2D_Solver([0,0], [10,10])
-        AStarSolver.Solve()
-
+    def update_tiles(self):
+        visited_draw_list = [item for item in self.visited_queue if item not in self.updated_tiles]
+        if not(self.path):
+            for node in visited_draw_list:
+                tile = self.get_tile(node[0], node[1])
+                if tile != None:
+                    tile.color = (0,128,255)
+        else:
+            for node in self.path:
+                tile = self.get_tile(node[0], node[1])
+                if tile != None:
+                    tile.color = (0,255,0)
+    
     def open(self):
         "Opens the tiles window, and allows for editing."
-        print(self.path)
         self.running = True
         mouseDown = False
         keyDown = False
@@ -221,10 +262,11 @@ class MapCreationWindow(object):
                 self.mouse_handler()
             elif keyDown:
                 self.key_handler()
-            
-            if tile_list != self.tile_list:
-                #If the tile_list has been changed by another source, reasign it
-                tile_list = self.tile_list
+                
+                if tile_list != self.tile_list:
+                    #If the tile_list has been changed by another source, reasign it
+                    tile_list = self.tile_list
+            self.update_tiles()
             
             #Fill the window and draw the tiles on it
             window.fill(self.bg_color)
@@ -237,16 +279,21 @@ class MapCreationWindow(object):
     def close(self):
         self.running = False
 class process(multiprocessing.Process):
-    def __init__(self, path, visited_queue):
+    def __init__(self, start, goal, path, visited_queue, allowed_list, forbidden_list):
         super(process, self).__init__()
+        self.start_pos = start
+        self.goal_pos = goal
         self.path = path
         self.visited_queue = visited_queue
+        self.allowed_states = allowed_list
+        self.forbidden_states = forbidden_list
     
     def run(self):
-        a = AStar.Movement_2D_Solver([0,0],[4,4], visitedQueue=self.visited_queue)
+        a = AStar.Movement_2D_Solver(self.start_pos, self.goal_pos, self.allowed_states, self.forbidden_states, True, self.visited_queue)
         a.Solve()
         for item in a.path:
             self.path.append(item)
+        print("Process complete!")
 
 if __name__ == "__main__":
     settings_window = DefineSettings()
