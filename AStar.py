@@ -133,8 +133,14 @@ class AStar_Solver:
         #Start and goal must be copies to prevent the solver from interacting with other components
         self.start = start[:]
         self.goal = goal[:]
-        self.allowed_states = allowed_states
-        self.forbidden_states = forbidden_states
+        if allowed_states == None or len(allowed_states) > 0:
+            self.allowed_states = None
+        else:
+            self.allowed_states = allowed_states
+        if forbidden_states == None or len(forbidden_states) > 0:
+            self.forbidden_states = None
+        else:
+            self.forbidden_states = forbidden_states
         self.start_state = None
         self.time_taken = 0
         self.nodes_considered = 0
