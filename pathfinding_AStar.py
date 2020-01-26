@@ -122,7 +122,15 @@ class MapCreationWindow(object):
         self.path = self.Manager.list([])
         self.visited_queue = self.Manager.list([])
         self.Process = process(self.path, self.visited_queue)
-        self.Process_Running = False
+        self.Process_Run = False
+        self.tile_list = self.__create_tiles()
+
+    def reset(self):
+        "Reset the map to its default state"
+        self.path = self.Manager.list([])
+        self.visited_queue = self.Manager.list([])
+        self.Process = process(self.path, self.visited_queue)
+        self.Process_Run = False
         self.tile_list = self.__create_tiles()
 
     def __create_tiles(self):
@@ -171,7 +179,7 @@ class MapCreationWindow(object):
         "Handles key presses."
         keyPresses = pygame.key.get_pressed()
         if keyPresses[pygame.K_r]:
-            self.tile_list = self.__create_tiles()
+            self.reset()
         elif keyPresses[pygame.K_ESCAPE]:
             self.close()
         elif keyPresses[pygame.K_RETURN]:
@@ -179,9 +187,9 @@ class MapCreationWindow(object):
     
     def start_pathfinding(self):
         "Initialise the A* pathfinding algorithm"
-        if not self.Process_Running:
+        if not self.Process_Run:
             self.Process.start()
-            self.Process_Running = True
+            self.Process_Run = True
     
     def Solve(self):
         AStarSolver = AStar.Movement_2D_Solver([0,0], [10,10])
@@ -218,6 +226,7 @@ class MapCreationWindow(object):
                 #If the tile_list has been changed by another source, reasign it
                 tile_list = self.tile_list
             
+            #Fill the window and draw the tiles on it
             window.fill(self.bg_color)
             for tile in tile_list:
                 tile.draw()
@@ -234,7 +243,10 @@ class process(multiprocessing.Process):
         self.visited_queue = visited_queue
     
     def run(self):
-        pass
+        a = AStar.Movement_2D_Solver([0,0],[4,4], visitedQueue=self.visited_queue)
+        a.Solve()
+        for item in a.path:
+            self.path.append(item)
 
 if __name__ == "__main__":
     settings_window = DefineSettings()
