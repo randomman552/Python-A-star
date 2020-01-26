@@ -133,12 +133,12 @@ class AStar_Solver:
         #Start and goal must be copies to prevent the solver from interacting with other components
         self.start = start[:]
         self.goal = goal[:]
-        if allowed_states == None or len(allowed_states) > 0:
+        if allowed_states == None or len(allowed_states) == 0:
             self.allowed_states = None
         else:
             self.allowed_states = allowed_states
-        if forbidden_states == None or len(forbidden_states) > 0:
-            self.forbidden_states = None
+        if forbidden_states == None or len(forbidden_states) == 0:
+            self.forbidden_states = []
         else:
             self.forbidden_states = forbidden_states
         self.start_state = None
@@ -163,14 +163,14 @@ class AStar_Solver:
                 if closestChild.value == self.goal:
                     self.path = closestChild.path
                     break
-                self.visitedQueue.append(closestChild.value)
                 for child in closestChild.children:
-                    if (child.value not in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
+                    if not(closestChild.value in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
                         count += 1
                         if not child.dist:
                             self.path = child.path
                             break
                         self.PriorityQueue.put((child.dist, count, child))
+                self.visitedQueue.append(closestChild.value)
             if not self.path:
                 raise Exception("No path")
             end_time = time.time()
@@ -235,10 +235,10 @@ def String_Solver_Example():
     print("Nodes Considered: " + str(a.nodes_considered))
 
 def Movement_2D_Solver_Example():
-    goal = [11,11]
+    goal = [20,20]
     start = [1,1]
-    allowed_states = None
-    forbidden_states = None
+    allowed_states = []
+    forbidden_states = []
     a = Movement_2D_Solver(start, goal, allowed_states, forbidden_states, diagonal_enabled = True)
     a.Solve()
     for num,step in enumerate(a.path):
