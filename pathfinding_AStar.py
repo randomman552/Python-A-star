@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import pygame
 import threading
+import multiprocessing
 import AStar
 import tkinter as tk
 from tkinter import messagebox as ms_box
@@ -91,6 +92,7 @@ class tile(object):
     x_pos and y_pos are the position of the tile."""
     def __init__(self, window, size, x_pos, y_pos):
         self.enabled = True
+        self.state = "normal"
         self.window = window
         self.size = size
         self.x_pos = x_pos
@@ -100,7 +102,10 @@ class tile(object):
     def draw(self):
         "Draw the tile on the pygame window"
         if self.enabled:
-            pygame.draw.rect(self.window, self.color, (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
+            if self.state.lower() == "normal":
+                pygame.draw.rect(self.window, self.color, (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
+            else:
+                pygame.draw.rect(self.window, (255,0,255), (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
 class MapCreationWindow(object):
     "Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm."
     def __init__(self, borderSize, tileSize, x_tiles, y_tiles):
@@ -113,7 +118,11 @@ class MapCreationWindow(object):
         self.__tileSize = tileSize
         self.__x_tiles = x_tiles
         self.__y_tiles = y_tiles
-        self.workerThreads = []
+        self.Manager = multiprocessing.Manager()
+        self.path = self.Manager.list([])
+        self.visited_queue = self.Manager.list([])
+        self.Process = process(self.path, self.visited_queue)
+        self.Process_Running = False
         self.tile_list = self.__create_tiles()
 
     def __create_tiles(self):
@@ -137,7 +146,7 @@ class MapCreationWindow(object):
 
     def get_tile(self, x, y):
         """Returns the tile at the specified x and y in the tile list.\n
-        If an invalid x or y coirdinate is passed, will return none."""
+        If an invalid x or y coordinate is passed, will return none."""
         if x <= self.__x_tiles and y <= self.__y_tiles:
             return self.tile_list[((y - 1) * self.__x_tiles) + x - 1]
         else:
@@ -153,7 +162,7 @@ class MapCreationWindow(object):
                 tile.enabled = False
             elif mousePresses[1]:
                 tile.enabled = True
-                tile.color = (0,0,255)
+                tile.state = "n"
             elif mousePresses[2]:
                 tile.enabled = True
                 tile.color = (255,255,255)
@@ -170,34 +179,36 @@ class MapCreationWindow(object):
     
     def start_pathfinding(self):
         "Initialise the A* pathfinding algorithm"
-        if len(self.workerThreads) == 0:
-            self.workerThreads.append(AStarWorker([1,1],[10,10]))
-            self.workerThreads[0].start()
-        
+        if not self.Process_Running:
+            self.Process.start()
+            self.Process_Running = True
+    
+    def Solve(self):
+        AStarSolver = AStar.Movement_2D_Solver([0,0], [10,10])
+        AStarSolver.Solve()
+
     def open(self):
         "Opens the tiles window, and allows for editing."
+        print(self.path)
         self.running = True
         mouseDown = False
         keyDown = False
         window = self.window
         tile_list = self.tile_list
         while self.running:
-            if len(self.workerThreads) == 0:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.close()
-                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                        mouseDown = True 
-                    elif event.type == pygame.MOUSEBUTTONUP:
-                        mouseDown = False
-                    elif event.type == pygame.KEYDOWN:
-                        keyDown = True
-                    elif event.type == pygame.KEYUP:
-                        keyDown = False
-            else:
-                #Update the display according to the progress of the thread
-                pass
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.close()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mouseDown = True 
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    mouseDown = False
+                elif event.type == pygame.KEYDOWN:
+                    keyDown = True
+                elif event.type == pygame.KEYUP:
+                    keyDown = False
             
+            #Handle keyboard and mouse events
             if mouseDown:
                 self.mouse_handler()
             elif keyDown:
@@ -206,6 +217,7 @@ class MapCreationWindow(object):
             if tile_list != self.tile_list:
                 #If the tile_list has been changed by another source, reasign it
                 tile_list = self.tile_list
+            
             window.fill(self.bg_color)
             for tile in tile_list:
                 tile.draw()
@@ -215,22 +227,19 @@ class MapCreationWindow(object):
 
     def close(self):
         self.running = False
-class AStarWorker(threading.Thread):
-    "Worker to handle the execution of the A* algorithm on another thread."
-    def __init__(self, start, goal, allowed_tiles=None, forbidden_tiles=None, diagonal_enabled=True):
-        super(AStarWorker, self).__init__()
-        self.solver = AStar.Movement_2D_Solver(start, goal, allowed_tiles, forbidden_tiles, diagonal_enabled)
-        self.complete = False
-
+class process(multiprocessing.Process):
+    def __init__(self, path, visited_queue):
+        super(process, self).__init__()
+        self.path = path
+        self.visited_queue = visited_queue
+    
     def run(self):
-        print("Worker starting...")
-        self.solver.Solve()
-        self.complete = True
-        print("Solving complete!")
+        pass
 
-settings_window = DefineSettings()
-settings = settings_window.open()
+if __name__ == "__main__":
+    settings_window = DefineSettings()
+    settings = settings_window.open()
 
-borderSize = 10
-Window = MapCreationWindow(borderSize, settings["tile size"], settings["grid size"]["x"], settings["grid size"]["y"])
-Window.open()
+    borderSize = 10
+    Window = MapCreationWindow(borderSize, settings["tile size"], settings["grid size"]["x"], settings["grid size"]["y"])
+    Window.open()
