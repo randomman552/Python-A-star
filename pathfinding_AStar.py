@@ -107,6 +107,7 @@ class MapCreationWindow(object):
         self.windowSize = (x_tiles * tileSize + borderSize, y_tiles * tileSize + borderSize)
         self.window = pygame.display.set_mode(self.windowSize)
         pygame.display.set_caption("A* Path Finder")
+        self.bg_color = (200,200,200)
         self.__borderSize = borderSize
         self.__tileSize = tileSize
         self.__x_tiles = x_tiles
@@ -128,51 +129,81 @@ class MapCreationWindow(object):
         #If the cursor is in the lower border, return None to prevent the changing of the opposite tiles
         if pos[0] < borderSize // 2 or pos[1] < borderSize // 2:
             return None
-        x_num = self.__x_tiles
-        y_num = self.__y_tiles
         tile_x = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
         tile_y = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
-        #If the tile selected is outside of the array, return None to prevent crashes
-        if tile_x > x_num or tile_y > y_num:
-            return None
-        tile = self.tile_list[((tile_y - 1) * x_num) + tile_x - 1]
-        return tile
+        return self.get_tile(tile_x, tile_y)
 
+    def get_tile(self, x, y):
+        """Returns the tile at the specified x and y in the tile list.\n
+        If an invalid x or y coirdinate is passed, will return none."""
+        if x <= self.__x_tiles and y <= self.__y_tiles:
+            return self.tile_list[((y - 1) * self.__x_tiles) + x - 1]
+        else:
+            return None
+    
+    def mouse_handler(self):
+        "Handles mouse actions."
+        mousePresses = pygame.mouse.get_pressed()
+        mousePosition = pygame.mouse.get_pos()
+        tile = self.get_cur_tile(mousePosition)
+        if tile != None:
+            if mousePresses[0]:
+                tile.enabled = False
+            elif mousePresses[1]:
+                tile.enabled = True
+                tile.color = (0,0,255)
+            elif mousePresses[2]:
+                tile.enabled = True
+                tile.color = (255,255,255)
+        
+    def key_handler(self):
+        "Handles key presses."
+        keyPresses = pygame.key.get_pressed()
+        if keyPresses[pygame.K_r]:
+            self.tile_list = self.__create_tiles()
+        elif keyPresses[pygame.K_ESCAPE]:
+            self.close()
+        elif keyPresses[pygame.K_RETURN]:
+            print("yeet")
+            pass
+    
     def open(self):
         "Opens the tiles window, and allows for editing."
-        running = True
+        self.running = True
         mouseDown = False
+        keyDown = False
         window = self.window
         tile_list = self.tile_list
-        while running:
+        while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    self.close()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouseDown = True 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     mouseDown = False
+                elif event.type == pygame.KEYDOWN:
+                    keyDown = True
+                elif event.type == pygame.KEYUP:
+                    keyDown = False
             
             if mouseDown:
-                mousePresses = pygame.mouse.get_pressed()
-                mousePosition = pygame.mouse.get_pos()
-                tile = self.get_cur_tile(mousePosition)
-                if tile != None:
-                    if mousePresses[0]:
-                        tile.enabled = False
-                    elif mousePresses[1]:
-                        tile.enabled = True
-                        tile.color = (0,0,255)
-                    elif mousePresses[2]:
-                        tile.enabled = True
-                        tile.color = (255,255,255)
-            window.fill((200,200,200))
+                self.mouse_handler()
+            elif keyDown:
+                self.key_handler()
+            
+            if tile_list != self.tile_list:
+                #If the tile_list has been changed by another source, reasign it
+                tile_list = self.tile_list
+            window.fill(self.bg_color)
             for tile in tile_list:
                 tile.draw()
             pygame.display.update()
+        pygame.quit()
+        quit()
 
     def close(self):
-        pygame.quit()
+        self.running = False
 
 settings_window = DefineSettings()
 settings = settings_window.open()
