@@ -126,7 +126,7 @@ class State_2D_Movement(State):
 class AStar_Solver:
     """Base A* solver class, all other solvers are to be based on this class.
     Look at the string_solver for an example of implementation."""
-    def __init__(self, start, goal, allowed_states = None):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None):
         self.path = []
         self.visitedQueue = []
         self.PriorityQueue = PriorityQueue()
@@ -134,6 +134,7 @@ class AStar_Solver:
         self.start = start[:]
         self.goal = goal[:]
         self.allowed_states = allowed_states
+        self.forbidden_states = forbidden_states
         self.start_state = None
         self.time_taken = 0
         self.nodes_considered = 0
@@ -151,13 +152,14 @@ class AStar_Solver:
             self.PriorityQueue.put((0, count, startState))
             while (not self.path) and (self.PriorityQueue.qsize()):
                 closestChild = self.PriorityQueue.get()[2]
-                if closestChild.dist == 0:
+                closestChild.CreateChildren()
+                #If the goal and start value are the same, then nothing needs to be done.
+                if closestChild.value == self.goal:
                     self.path = closestChild.path
                     break
-                closestChild.CreateChildren()
                 self.visitedQueue.append(closestChild.value)
                 for child in closestChild.children:
-                    if (child.value not in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states):
+                    if (child.value not in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
                         count += 1
                         if not child.dist:
                             self.path = child.path
@@ -183,8 +185,8 @@ class String_Solver(AStar_Solver):
     start = The start state of the string, e.g. 'bcda'.
     goal = The desired end state of the string, e.g. 'abcd'.
     allowed_states is an optional argument, when set it will prevent any children being created outside of these set states."""
-    def __init__(self, start, goal, allowed_states = None):
-        super(String_Solver, self).__init__(start, goal, allowed_states)
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None):
+        super(String_Solver, self).__init__(start, goal, allowed_states, forbidden_states)
         if not self.__validate():
             raise Exception("Invalid inputs")
         else:
@@ -204,8 +206,8 @@ class String_Solver(AStar_Solver):
                 return False
         return True
 class Movement_2D_Solver(AStar_Solver):
-    def __init__(self, start, goal, allowed_states = None, diagonal_enabled = False):
-        super(Movement_2D_Solver, self).__init__(start, goal, allowed_states)
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False):
+        super(Movement_2D_Solver, self).__init__(start, goal, allowed_states, forbidden_states)
         self.diagonal_enabled = diagonal_enabled
         self.start_state = self.__get_start_state()
     
@@ -230,7 +232,8 @@ def Movement_2D_Solver_Example():
     goal = [11,11]
     start = [1,1]
     allowed_states = None
-    a = Movement_2D_Solver(start, goal, allowed_states, diagonal_enabled = True)
+    forbidden_states = None
+    a = Movement_2D_Solver(start, goal, allowed_states, forbidden_states, diagonal_enabled = True)
     a.Solve()
     for num,step in enumerate(a.path):
         print(str(num) + ": " + str(step))
