@@ -126,9 +126,9 @@ class State_2D_Movement(State):
 class AStar_Solver:
     """Base A* solver class, all other solvers are to be based on this class.
     Look at the string_solver for an example of implementation."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = []):
         self.path = []
-        self.visitedQueue = []
+        self.visitedQueue = visitedQueue
         self.PriorityQueue = PriorityQueue()
         #Start and goal must be copies to prevent the solver from interacting with other components
         self.start = start[:]
@@ -185,8 +185,8 @@ class String_Solver(AStar_Solver):
     start = The start state of the string, e.g. 'bcda'.
     goal = The desired end state of the string, e.g. 'abcd'.
     allowed_states is an optional argument, when set it will prevent any children being created outside of these set states."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None):
-        super(String_Solver, self).__init__(start, goal, allowed_states, forbidden_states)
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = []):
+        super(String_Solver, self).__init__(start, goal, allowed_states, forbidden_states, visitedQueue)
         if not self.__validate():
             raise Exception("Invalid inputs")
         else:
@@ -206,8 +206,8 @@ class String_Solver(AStar_Solver):
                 return False
         return True
 class Movement_2D_Solver(AStar_Solver):
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False):
-        super(Movement_2D_Solver, self).__init__(start, goal, allowed_states, forbidden_states)
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = []):
+        super(Movement_2D_Solver, self).__init__(start, goal, allowed_states, forbidden_states, visitedQueue)
         self.diagonal_enabled = diagonal_enabled
         self.start_state = self.__get_start_state()
     
