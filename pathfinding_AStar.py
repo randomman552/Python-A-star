@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import pygame
+import threading
 import AStar
 import tkinter as tk
 from tkinter import messagebox as ms_box
@@ -112,6 +113,7 @@ class MapCreationWindow(object):
         self.__tileSize = tileSize
         self.__x_tiles = x_tiles
         self.__y_tiles = y_tiles
+        self.workerThreads = []
         self.tile_list = self.__create_tiles()
 
     def __create_tiles(self):
@@ -164,9 +166,14 @@ class MapCreationWindow(object):
         elif keyPresses[pygame.K_ESCAPE]:
             self.close()
         elif keyPresses[pygame.K_RETURN]:
-            print("yeet")
-            pass
+            self.start_pathfinding()
     
+    def start_pathfinding(self):
+        "Initialise the A* pathfinding algorithm"
+        if len(self.workerThreads) == 0:
+            self.workerThreads.append(AStarWorker([1,1],[10,10]))
+            self.workerThreads[0].start()
+        
     def open(self):
         "Opens the tiles window, and allows for editing."
         self.running = True
@@ -175,17 +182,21 @@ class MapCreationWindow(object):
         window = self.window
         tile_list = self.tile_list
         while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.close()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    mouseDown = True 
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    mouseDown = False
-                elif event.type == pygame.KEYDOWN:
-                    keyDown = True
-                elif event.type == pygame.KEYUP:
-                    keyDown = False
+            if len(self.workerThreads) == 0:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.close()
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        mouseDown = True 
+                    elif event.type == pygame.MOUSEBUTTONUP:
+                        mouseDown = False
+                    elif event.type == pygame.KEYDOWN:
+                        keyDown = True
+                    elif event.type == pygame.KEYUP:
+                        keyDown = False
+            else:
+                #Update the display according to the progress of the thread
+                pass
             
             if mouseDown:
                 self.mouse_handler()
@@ -204,6 +215,18 @@ class MapCreationWindow(object):
 
     def close(self):
         self.running = False
+class AStarWorker(threading.Thread):
+    "Worker to handle the execution of the A* algorithm on another thread."
+    def __init__(self, start, goal, allowed_tiles=None, forbidden_tiles=None, diagonal_enabled=True):
+        super(AStarWorker, self).__init__()
+        self.solver = AStar.Movement_2D_Solver(start, goal, allowed_tiles, forbidden_tiles, diagonal_enabled)
+        self.complete = False
+
+    def run(self):
+        print("Worker starting...")
+        self.solver.Solve()
+        self.complete = True
+        print("Solving complete!")
 
 settings_window = DefineSettings()
 settings = settings_window.open()
