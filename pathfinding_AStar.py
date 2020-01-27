@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 import pygame
-import threading
 import multiprocessing
 import AStar
+import time
 import tkinter as tk
 from tkinter import messagebox as ms_box
 
@@ -108,7 +108,7 @@ class tile(object):
                 pygame.draw.rect(self.window, (255,0,255), (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
 class MapCreationWindow(object):
     "Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm."
-    def __init__(self, borderSize, tileSize, x_tiles, y_tiles):
+    def __init__(self, borderSize, tileSize, x_tiles, y_tiles, diagonal_enabled = False):
         pygame.init()
         self.windowSize = (x_tiles * tileSize + borderSize, y_tiles * tileSize + borderSize)
         self.window = pygame.display.set_mode(self.windowSize)
@@ -119,19 +119,24 @@ class MapCreationWindow(object):
         self.__x_tiles = x_tiles
         self.__y_tiles = y_tiles
         self.Manager = multiprocessing.Manager()
-        self.path = self.Manager.list([])
-        self.visited_queue = self.Manager.list([])
+        self.shared_memory = self.Manager.dict({
+            "visited": set([]),
+            "path": set([])
+        })
         self.Process = None
         self.__nav_num = 0
         self.tile_list = self.__create_tiles()
         self.updated_tiles = []
+        self.diagonal_enabled = diagonal_enabled
 
     def reset(self):
         "Reset the map to its default state"
-        self.path = self.Manager.list([])
-        self.visited_queue = self.Manager.list([])
         self.Process = None
         self.Process_Run = False
+        self.shared_memory = self.Manager.dict({
+            "visited": set([]),
+            "path": set([])
+        })
         self.tile_list = self.__create_tiles()
         self.__nav_num = 0
         self.updated_tiles = []
@@ -150,7 +155,7 @@ class MapCreationWindow(object):
         "When given an x and y coordinate in the form (x,y) will return the coords of the tile that occupies that space."
         tile_x = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
         tile_y = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
-        return [tile_x, tile_y]
+        return (tile_x, tile_y)
 
     def get_cur_tile(self, pos):
         "When given an x and y coordinate in the form (x,y), will return the tile that occupies that position."
@@ -194,17 +199,6 @@ class MapCreationWindow(object):
             self.close()
         elif keyPresses[pygame.K_RETURN]:
             self.start_pathfinding()
-    
-    def __generate_inital_forbidden(self):
-        "Generates the intial forbidden tiles (form a sort of border around the edge of the map)."
-        forbidden = []
-        for x in range(self.__x_tiles + 1):
-            forbidden.append([x, 0])
-            forbidden.append([x, self.__y_tiles + 1])
-        for y in range(self.__y_tiles + 1):
-            forbidden.append([0, y])
-            forbidden.append([self.__x_tiles + 1, y])
-        return forbidden
 
     def start_pathfinding(self):
         "Initialise the A* pathfinding algorithm"
@@ -221,18 +215,20 @@ class MapCreationWindow(object):
                     forbidden_list.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
             start = nav_nodes[0]
             goal = nav_nodes[1]
-            self.Process = process(start, goal, self.path, self.visited_queue, allowed_list, forbidden_list)
+            self.Process = process(start, goal, self.shared_memory, allowed_list, forbidden_list, self.diagonal_enabled)
             self.Process.start()
     
     def update_tiles(self):
-        visited_draw_list = [item for item in self.visited_queue if item not in self.updated_tiles]
-        if not(self.path):
+        "draw the current state of the tiles on screen"
+        if not(self.shared_memory["path"]):
+            visited_draw_list = set([tuple(node) for node in self.shared_memory["visited"] if node not in self.updated_tiles])
             for node in visited_draw_list:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
                     tile.color = (0,128,255)
+                self.updated_tiles.append(node)
         else:
-            for node in self.path:
+            for node in self.shared_memory["path"]:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
                     tile.color = (0,255,0)
@@ -266,6 +262,7 @@ class MapCreationWindow(object):
                 if tile_list != self.tile_list:
                     #If the tile_list has been changed by another source, reasign it
                     tile_list = self.tile_list
+            
             self.update_tiles()
             
             #Fill the window and draw the tiles on it
@@ -273,27 +270,80 @@ class MapCreationWindow(object):
             for tile in tile_list:
                 tile.draw()
             pygame.display.update()
-        pygame.quit()
+        
+        #Exit program
+        if self.Process != None:
+            self.Process.close()
         quit()
+        pygame.quit()
 
     def close(self):
         self.running = False
 class process(multiprocessing.Process):
-    def __init__(self, start, goal, path, visited_queue, allowed_list, forbidden_list):
+    "For running the pathfinding process on another process (to allow for updating of the pygame display to happen in parallel)"
+    def __init__(self, start, goal, shared_memory, allowed_list, forbidden_list, diagonal_enabled):
         super(process, self).__init__()
         self.start_pos = start
         self.goal_pos = goal
-        self.path = path
-        self.visited_queue = visited_queue
+        self.shared_memory = shared_memory
         self.allowed_states = allowed_list
         self.forbidden_states = forbidden_list
+        self.diagonal_enabled = diagonal_enabled
     
     def run(self):
-        a = AStar.Movement_2D_Solver(self.start_pos, self.goal_pos, self.allowed_states, self.forbidden_states, True, self.visited_queue)
+        a = self.Movement_2D_Solver(self.start_pos, self.goal_pos, self.shared_memory, self.allowed_states, self.forbidden_states, self.diagonal_enabled)
         a.Solve()
         for item in a.path:
-            self.path.append(item)
+            self.shared_memory["path"].add(item)
         print("Process complete!")
+    class Movement_2D_Solver(AStar.Movement_2D_Solver):
+        "Sub-class of the normal Movement_2D_Solver in order make sure data is recieved properly by the main process."
+        def __init__(self, start, goal, shared_memory, allowed_states = None, forbidden_states = None, diagonal_enabled = False):
+            super().__init__(tuple(start), tuple(goal), allowed_states, forbidden_states)
+            self.shared_memory = shared_memory
+            self.diagonal_enabled = diagonal_enabled
+            self.start_state = self.__get_start_state()
+        
+        def __get_start_state(self):
+            return AStar.State_2D_Movement(self.start, 0, self.diagonal_enabled, self.start, self.goal)
+
+        def Solve(self):
+            """Creates a solution on how to get from the start, to the goal.\n
+            This method returns the path created, but it can also be gained by using the .path atribute.\n
+            The .paths_considered and .time_taken atributes can be looked at if you want to gauge the performance of this algorithm.\n
+            If no solution is found, this method will raise an exception, which can then be caught with a try except."""
+            start_time = time.time()
+            startState = self.start_state
+            #Check if startState is set.
+            if startState != None:
+                count = 0
+                self.PriorityQueue.put((0, count, startState))
+                while (not self.path) and (self.PriorityQueue.qsize()):
+                    closestChild = self.PriorityQueue.get()[2]
+                    closestChild.CreateChildren()
+                    #If the goal and start value are the same, then nothing needs to be done.
+                    if closestChild.value == self.goal:
+                        self.path = closestChild.path
+                        break
+                    for child in closestChild.children:
+                        if not(closestChild.value in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
+                            count += 1
+                            if not child.dist:
+                                self.path = child.path
+                                break
+                            self.PriorityQueue.put((child.dist, count, child))
+                    self.visitedQueue.add(closestChild.value)
+                    self.shared_memory["visited"] = self.visitedQueue
+                if not self.path:
+                    raise Exception("No path")
+                end_time = time.time()
+                self.time_taken = int(round((end_time - start_time) * 1000, 0))
+                self.nodes_considered = count
+                self.shared_memory["path"] = set(self.path)
+                return self.path
+            else:
+                #If the startState is not set, raise an exception
+                raise Exception("startState is not set. Are you instansiating the wrong class?")
 
 if __name__ == "__main__":
     settings_window = DefineSettings()

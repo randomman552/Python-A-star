@@ -93,7 +93,7 @@ class State_String(State):
 class State_2D_Movement(State):
     "State class used with the Movement_2D_Solver"
     def __init__(self, value, parent, diagonal_enabled=False, start = 0, goal = 0):
-        super(State_2D_Movement, self).__init__(value, parent, start, goal)
+        super(State_2D_Movement, self).__init__(tuple(value), parent, start, goal)
         self.diagonal_enabled = diagonal_enabled
         self.dist = self.GetDist()
 
@@ -126,7 +126,7 @@ class State_2D_Movement(State):
 class AStar_Solver:
     """Base A* solver class, all other solvers are to be based on this class.
     Look at the string_solver for an example of implementation."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = []):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set([])):
         self.path = []
         self.visitedQueue = visitedQueue
         self.PriorityQueue = PriorityQueue()
@@ -138,7 +138,7 @@ class AStar_Solver:
         else:
             self.allowed_states = allowed_states
         if forbidden_states == None or len(forbidden_states) == 0:
-            self.forbidden_states = []
+            self.forbidden_states = None
         else:
             self.forbidden_states = forbidden_states
         self.start_state = None
@@ -170,7 +170,7 @@ class AStar_Solver:
                             self.path = child.path
                             break
                         self.PriorityQueue.put((child.dist, count, child))
-                self.visitedQueue.append(closestChild.value)
+                self.visitedQueue.add(closestChild.value)
             if not self.path:
                 raise Exception("No path")
             end_time = time.time()
@@ -212,8 +212,8 @@ class String_Solver(AStar_Solver):
                 return False
         return True
 class Movement_2D_Solver(AStar_Solver):
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = []):
-        super(Movement_2D_Solver, self).__init__(start, goal, allowed_states, forbidden_states, visitedQueue)
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = set([])):
+        super(Movement_2D_Solver, self).__init__(tuple(start), tuple(goal), allowed_states, forbidden_states, visitedQueue)
         self.diagonal_enabled = diagonal_enabled
         self.start_state = self.__get_start_state()
     
@@ -235,7 +235,7 @@ def String_Solver_Example():
     print("Nodes Considered: " + str(a.nodes_considered))
 
 def Movement_2D_Solver_Example():
-    goal = [20,20]
+    goal = [100,100]
     start = [1,1]
     allowed_states = []
     forbidden_states = []
