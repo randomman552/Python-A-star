@@ -7,19 +7,42 @@ import tkinter as tk
 from tkinter import messagebox as ms_box
 
 class DefineSettings(object):
-    "Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict."
-    def __init__(self):
+    """Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict.\n
+    Can be passed some default settings as an optional argument"""
+    def __init__(self, settings=None):
         #Window
         self.window = tk.Tk()
 
+        #Settings
+        if settings == None:
+            self.settings = {
+                "tile size": 20,
+                "grid size": {
+                    "x": 50,
+                    "y": 50
+                },
+                "draw progress": tk.BooleanVar(self.window, True),
+                "diagonal enabled": tk.BooleanVar(self.window, True)
+            }
+        else:
+            self.settings = {
+                "tile size": settings["tile size"],
+                "grid size": {
+                    "x": settings["grid size"]["x"],
+                    "y": settings["grid size"]["y"]
+                },
+                "draw progress": tk.BooleanVar(self.window, settings["draw progress"]),
+                "diagonal enabled": tk.BooleanVar(self.window, settings["diagonal enabled"])
+            }
+        
         #Tile size input
         TileSize_Label = tk.Label(self.window, text="Tile size: ")
-        TileSize_Label.grid(column=1, row=0, sticky=tk.E)
+        TileSize_Label.grid(column=1, row=0, sticky=tk.E, pady=(10,0))
     
         TileSize_Input = tk.Entry(self.window)
         TileSize_Input.configure(width=3)
-        TileSize_Input.insert(0, "50")
-        TileSize_Input.grid(column=2, row=0, sticky=tk.W)
+        TileSize_Input.insert(0, self.settings["tile size"])
+        TileSize_Input.grid(column=2, row=0, sticky=tk.W, pady=(10,0))
 
         #Grid size input
         GridSizeX_Label = tk.Label(self.window, text="X:")
@@ -30,33 +53,41 @@ class DefineSettings(object):
 
         GridSizeX_Input = tk.Entry(self.window)
         GridSizeX_Input.configure(width=3)
-        GridSizeX_Input.insert(0, "15")
+        GridSizeX_Input.insert(0, self.settings["grid size"]["x"])
         GridSizeX_Input.grid(column=2, row=1, sticky=tk.W)
 
         GridSizeY_Input = tk.Entry(self.window)
         GridSizeY_Input.configure(width=3)
-        GridSizeY_Input.insert(0, "15")
+        GridSizeY_Input.insert(0, self.settings["grid size"]["y"])
         GridSizeY_Input.grid(column=2, row=2, sticky=tk.W)
+
+        #Draw all checkbox
+        DrawAll_CheckBox = tk.Checkbutton(self.window, variable=self.settings["draw progress"], onvalue=True, offvalue=False)
+        DrawAll_CheckBox.grid(column=2, row=3, sticky=tk.W)
+
+        DrawAll_Label = tk.Label(self.window, text="Draw progress")
+        DrawAll_Label.grid(column=1, row=3, sticky=tk.E)
+
+        #Diagonal enabled
+        DiagonalEnabled_Checkbox = tk.Checkbutton(self.window, variable=self.settings["diagonal enabled"], onvalue=True, offvalue=False)
+        DiagonalEnabled_Checkbox.grid(column=2, row=4, sticky=tk.W)
+
+        DiagonalEnabled_Label = tk.Label(self.window, text="Diagonal?")
+        DiagonalEnabled_Label.grid(column=1, row=4, sticky=tk.E)
 
         #Buttons
         Submit_Button = tk.Button(self.window, text="Generate", command=lambda: self.__submit())
-        Submit_Button.grid(column=2, row=3, columnspan=2, sticky=tk.W)
+        Submit_Button.grid(column=2, row=5, columnspan=2, sticky=tk.W, padx=(0,20), pady=(10,20))
 
-        Cancel_Button = tk.Button(self.window, text="Cancel", command=lambda: self.close())
-        Cancel_Button.grid(column=0, row=3, columnspan=2, sticky=tk.E)
+        Cancel_Button = tk.Button(self.window, text="Cancel", command=lambda: self.__quit())
+        Cancel_Button.grid(column=0, row=5, columnspan=2, sticky=tk.E, padx=(20,0), pady=(10,20))
         
         #Set atributes
         self.window.resizable(0,0)
         self.window.title('Define grid size.')
         self.GridSize_Input = (GridSizeX_Input, GridSizeY_Input)
         self.TileSize_Input = TileSize_Input
-        self.settings = {
-            "tile size": 0,
-            "grid size": {
-                "x": 0,
-                "y": 0
-            }
-        }
+        self.DrawAll_Input = DrawAll_CheckBox
 
     def __submit(self):
         "Action of the submit button, if invalid inputs are present, the program will ask the user to re-enter the details."
@@ -64,12 +95,16 @@ class DefineSettings(object):
             TileSize = int(self.TileSize_Input.get())
             GridSizeX = int(self.GridSize_Input[0].get())
             GridSizeY = int(self.GridSize_Input[1].get())
+            DrawAll = self.settings["draw progress"].get()
+            DiagonalEnabled = self.settings["diagonal enabled"].get()
             self.settings = {
                 "tile size": TileSize,
                 "grid size": {
                     "x": GridSizeX,
                     "y": GridSizeY
-                }
+                },
+                "draw progress": DrawAll,
+                "diagonal enabled": DiagonalEnabled
             }
             self.close()
         except:
@@ -77,12 +112,16 @@ class DefineSettings(object):
             MessageBox.show()
 
     def close(self):
-        "Close the window, returns self.settings."
+        "Close the window, returns self.settings"
         self.window.destroy()
         return self.settings
+
+    def __quit(self):
+        "Close the program"
+        quit()
     
     def open(self):
-        "Open the window, returns self.settings after the .close method is called."
+        "Open the window (use .close method to force close)"
         self.window.mainloop()
         return self.settings
 class tile(object):
@@ -108,31 +147,31 @@ class tile(object):
                 pygame.draw.rect(self.window, (255,0,255), (self.x_pos + 1, self.y_pos + 1, self.size - 2, self.size - 2))
 class MapCreationWindow(object):
     "Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm."
-    def __init__(self, borderSize, tileSize, x_tiles, y_tiles, diagonal_enabled = False):
+    def __init__(self, settings):
         pygame.init()
-        self.windowSize = (x_tiles * tileSize + borderSize, y_tiles * tileSize + borderSize)
+        self.__borderSize = settings["border"]
+        self.__tileSize = settings["tile size"]
+        self.__x_tiles = settings["grid size"]["x"]
+        self.__y_tiles = settings["grid size"]["y"]
+        self.diagonal_enabled = settings["diagonal enabled"]
+        self.__output_progress = settings["draw progress"]
+        self.windowSize = (self.__x_tiles * self.__tileSize + self.__borderSize, self.__y_tiles * self.__tileSize + self.__borderSize)
         self.window = pygame.display.set_mode(self.windowSize)
         pygame.display.set_caption("A* Path Finder")
         self.bg_color = (200,200,200)
-        self.__borderSize = borderSize
-        self.__tileSize = tileSize
-        self.__x_tiles = x_tiles
-        self.__y_tiles = y_tiles
         self.Manager = multiprocessing.Manager()
-        self.diagonal_enabled = diagonal_enabled
         self.reset()
 
     def reset(self):
         "Reset the map to its default state"
         self.Process = None
-        self.Process_Run = False
         self.shared_memory = self.Manager.dict({
             "visited": set(),
             "path": set()
         })
         self.tile_list = self.__create_tiles()
         self.__nav_num = 0
-        self.updated_tiles = []
+        self.updated_tiles = set()
 
     def __create_tiles(self):
         "Create the tileList variable filled with tile objects. Each tile represents a portion of the screen."
@@ -153,7 +192,7 @@ class MapCreationWindow(object):
     def get_cur_tile(self, pos):
         "When given an x and y coordinate in the form (x,y), will return the tile that occupies that position."
         #If the cursor is in the lower border, return None to prevent the changing of the opposite tiles
-        if pos[0] < borderSize // 2 or pos[1] < borderSize // 2:
+        if pos[0] < self.__borderSize // 2 or pos[1] < self.__borderSize // 2:
             return None
         coords = self.get_tile_coords(pos)
         tile_x = coords[0]
@@ -199,6 +238,7 @@ class MapCreationWindow(object):
             allowed_list = []
             forbidden_list = []
             nav_nodes = []
+            #Go thorugh the tiles on screen, assigning each to an appropriate group
             for tile in self.tile_list:
                 if tile.enabled:
                     allowed_list.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
@@ -206,20 +246,28 @@ class MapCreationWindow(object):
                         nav_nodes.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
                 else:
                     forbidden_list.append(self.get_tile_coords([tile.x_pos, tile.y_pos]))
-            start = nav_nodes[0]
-            goal = nav_nodes[1]
-            self.Process = process(start, goal, self.shared_memory, allowed_list, forbidden_list, self.diagonal_enabled)
-            self.Process.start()
+            #Sort the nav_nodes list so that the node that was created first is the start and the other the goal
+            nav_nodes = sorted(nav_nodes, key=lambda x: self.get_tile(x[0], x[1]).state)
+            #If the user has not created enough nav_nodes, display an error message and do not continue.
+            if len(nav_nodes) != 2:
+                temp = tk.Tk()
+                messagebox = ms_box.Message(temp, message="You must created exactly 2 navigation nodes (middle click).", title="Input error", type=ms_box.OK, icon=ms_box.WARNING)
+                temp.withdraw()
+                messagebox.show()
+            else:
+                #Create and start process
+                self.Process = process(nav_nodes[0], nav_nodes[1], self.shared_memory, allowed_list, forbidden_list, self.diagonal_enabled)
+                self.Process.start()
     
     def update_tiles(self):
         "draw the current state of the tiles on screen"
-        if not(self.shared_memory["path"]):
+        if not(self.shared_memory["path"]) and self.__output_progress:
             visited_draw_list = set([tuple(node) for node in self.shared_memory["visited"] if node not in self.updated_tiles])
             for node in visited_draw_list:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
                     tile.color = (0,128,255)
-                self.updated_tiles.append(node)
+                self.updated_tiles.add(node)
         else:
             for node in self.shared_memory["path"]:
                 tile = self.get_tile(node[0], node[1])
@@ -267,7 +315,6 @@ class MapCreationWindow(object):
         #Exit program
         if self.Process != None:
             self.Process.close()
-        quit()
         pygame.quit()
 
     def close(self):
@@ -288,7 +335,7 @@ class process(multiprocessing.Process):
         a.Solve()
         for item in a.path:
             self.shared_memory["path"].add(item)
-        print("Process complete!")
+    
     class Movement_2D_Solver(AStar.Movement_2D_Solver):
         "Sub-class of the normal Movement_2D_Solver in order make sure data is recieved properly by the main process."
         def __init__(self, start, goal, shared_memory, allowed_states = None, forbidden_states = None, diagonal_enabled = False):
@@ -339,9 +386,11 @@ class process(multiprocessing.Process):
                 raise Exception("startState is not set. Are you instansiating the wrong class?")
 
 if __name__ == "__main__":
-    settings_window = DefineSettings()
-    settings = settings_window.open()
+    settings = None
+    while True:
+        settings_window = DefineSettings(settings)
+        settings = settings_window.open()
 
-    borderSize = 10
-    Window = MapCreationWindow(borderSize, settings["tile size"], settings["grid size"]["x"], settings["grid size"]["y"])
-    Window.open()
+        settings["border"] = 10
+        Window = MapCreationWindow(settings)
+        Window.open()
