@@ -126,7 +126,7 @@ class State_2D_Movement(State):
 class AStar_Solver:
     """Base A* solver class, all other solvers are to be based on this class.
     Look at the string_solver for an example of implementation."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set([])):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set()):
         self.path = []
         self.visitedQueue = visitedQueue
         self.PriorityQueue = PriorityQueue()
@@ -191,7 +191,7 @@ class String_Solver(AStar_Solver):
     start = The start state of the string, e.g. 'bcda'.
     goal = The desired end state of the string, e.g. 'abcd'.
     allowed_states is an optional argument, when set it will prevent any children being created outside of these set states."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = []):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set()):
         super(String_Solver, self).__init__(start, goal, allowed_states, forbidden_states, visitedQueue)
         if not self.__validate():
             raise Exception("Invalid inputs")
@@ -212,7 +212,7 @@ class String_Solver(AStar_Solver):
                 return False
         return True
 class Movement_2D_Solver(AStar_Solver):
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = set([])):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = set()):
         super(Movement_2D_Solver, self).__init__(tuple(start), tuple(goal), allowed_states, forbidden_states, visitedQueue)
         self.diagonal_enabled = diagonal_enabled
         self.start_state = self.__get_start_state()
@@ -221,7 +221,7 @@ class Movement_2D_Solver(AStar_Solver):
         return State_2D_Movement(self.start, 0, self.diagonal_enabled, self.start, self.goal)
 
 def String_Solver_Example():
-    goal = """Did you ever hear the tragedy of Darth Plagueis "the wise"?"""
+    goal = """Despacito"""
     temp = list(goal)
     random.shuffle(temp)
     start = ""
@@ -247,5 +247,5 @@ def Movement_2D_Solver_Example():
     print("Nodes Considered: " + str(a.nodes_considered))
 
 if __name__ == "__main__":
-    Movement_2D_Solver_Example()
+    #Movement_2D_Solver_Example()
     #String_Solver_Example()
