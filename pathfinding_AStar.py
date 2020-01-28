@@ -167,7 +167,9 @@ class MapCreationWindow(object):
         self.Process = None
         self.shared_memory = self.Manager.dict({
             "visited": set(),
-            "path": set()
+            "path": set(),
+            "nodes considered": 0,
+            "time taken": 0
         })
         self.tile_list = self.__create_tiles()
         self.__nav_num = 0
@@ -268,11 +270,18 @@ class MapCreationWindow(object):
                 if tile != None:
                     tile.color = (0,128,255)
                 self.updated_tiles.add(node)
-        else:
+        elif self.Process != None:
             for node in self.shared_memory["path"]:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
                     tile.color = (0,255,0)
+            temp = tk.Tk()
+            timeTaken = self.shared_memory["time taken"]
+            nodesConsidered = self.shared_memory["nodes considered"]
+            messageBox = ms_box.Message(temp, title="Operation complete", message=f"{timeTaken}ms taken.\n{nodesConsidered} nodes considered.", type=ms_box.OK)
+            temp.withdraw()
+            messageBox.show()
+            self.Process = None
     
     def open(self):
         "Opens the tiles window, and allows for editing."
@@ -300,8 +309,8 @@ class MapCreationWindow(object):
             elif keyDown:
                 self.key_handler()
                 
+                #If the tile_list has been changed by another source, reasign it
                 if tile_list != self.tile_list:
-                    #If the tile_list has been changed by another source, reasign it
                     tile_list = self.tile_list
             
             self.update_tiles()
@@ -333,8 +342,8 @@ class process(multiprocessing.Process):
     def run(self):
         a = self.Movement_2D_Solver(self.start_pos, self.goal_pos, self.shared_memory, self.allowed_states, self.forbidden_states, self.diagonal_enabled)
         a.Solve()
-        for item in a.path:
-            self.shared_memory["path"].add(item)
+        self.shared_memory["nodes considered"] = a.nodes_considered
+        self.shared_memory["time taken"] = a.time_taken
     
     class Movement_2D_Solver(AStar.Movement_2D_Solver):
         "Sub-class of the normal Movement_2D_Solver in order make sure data is recieved properly by the main process."
