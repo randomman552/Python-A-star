@@ -323,10 +323,20 @@ class MapCreationWindow(object):
                 self.mouse_handler()
             elif keyDown:
                 self.key_handler()
-                
-                #If the tile_list has been changed by another source, reasign it
-                if tile_list != self.tile_list:
-                    tile_list = self.tile_list
+
+            #If the tile_list has been changed by another source, reasign it
+            if tile_list != self.tile_list:
+                tile_list = self.tile_list
+            
+            #If the path has been set to -1, there is no path between the nav nodes, display an error message
+            if self.shared_memory["path"] == -1:
+                temp = tk.Tk()
+                messageBox = ms_box.Message(temp, title="No path", message="No path", icon=ms_box.ERROR)
+                temp.withdraw()
+                messageBox.show()
+                self.shared_memory["path"] = set()
+                #Delete the references to the objects so they are garbage collected
+                del(temp, messageBox)
             
             self.update_tiles()
             
@@ -357,9 +367,13 @@ class process(multiprocessing.Process):
     
     def run(self):
         a = self.Movement_2D_Solver(self.start_pos, self.goal_pos, self.shared_memory, self.allowed_states, self.forbidden_states, self.diagonal_enabled)
-        a.Solve()
+        try:
+            a.Solve()
+        except:
+            self.shared_memory["path"] = -1
         self.shared_memory["nodes considered"] = a.nodes_considered
         self.shared_memory["time taken"] = a.time_taken
+            
     
     class Movement_2D_Solver(AStar.Movement_2D_Solver):
         "Sub-class of the normal Movement_2D_Solver in order make sure data is recieved properly by the main process."
