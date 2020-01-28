@@ -119,23 +119,16 @@ class MapCreationWindow(object):
         self.__x_tiles = x_tiles
         self.__y_tiles = y_tiles
         self.Manager = multiprocessing.Manager()
-        self.shared_memory = self.Manager.dict({
-            "visited": set([]),
-            "path": set([])
-        })
-        self.Process = None
-        self.__nav_num = 0
-        self.tile_list = self.__create_tiles()
-        self.updated_tiles = []
         self.diagonal_enabled = diagonal_enabled
+        self.reset()
 
     def reset(self):
         "Reset the map to its default state"
         self.Process = None
         self.Process_Run = False
         self.shared_memory = self.Manager.dict({
-            "visited": set([]),
-            "path": set([])
+            "visited": set(),
+            "path": set()
         })
         self.tile_list = self.__create_tiles()
         self.__nav_num = 0
@@ -144,8 +137,8 @@ class MapCreationWindow(object):
     def __create_tiles(self):
         "Create the tileList variable filled with tile objects. Each tile represents a portion of the screen."
         tile_list = []
-        for x in range(self.__x_tiles):
-            for y in range(self.__y_tiles):
+        for y in range(self.__y_tiles):
+            for x in range(self.__x_tiles):
                 tileSize = self.__tileSize
                 borderSize = self.__borderSize
                 tile_list.append(tile(self.window, tileSize, borderSize // 2 + x * tileSize, borderSize // 2 + y * tileSize))
@@ -153,8 +146,8 @@ class MapCreationWindow(object):
 
     def get_tile_coords(self, pos):
         "When given an x and y coordinate in the form (x,y) will return the coords of the tile that occupies that space."
-        tile_x = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
-        tile_y = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
+        tile_x = int(((pos[0] - self.__borderSize // 2) / self.__tileSize) + 1)
+        tile_y = int(((pos[1] - self.__borderSize // 2) / self.__tileSize) + 1)
         return (tile_x, tile_y)
 
     def get_cur_tile(self, pos):
