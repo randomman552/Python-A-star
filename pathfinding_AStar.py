@@ -149,17 +149,19 @@ class MapCreationWindow(object):
     "Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm."
     def __init__(self, settings):
         pygame.init()
+        pygame.font.init()
         self.__borderSize = settings["border"]
         self.__tileSize = settings["tile size"]
         self.__x_tiles = settings["grid size"]["x"]
         self.__y_tiles = settings["grid size"]["y"]
+        self.__controlPanelSize = 100
         self.diagonal_enabled = settings["diagonal enabled"]
         self.__output_progress = settings["draw progress"]
-        self.windowSize = (self.__x_tiles * self.__tileSize + self.__borderSize, self.__y_tiles * self.__tileSize + self.__borderSize)
-        self.window = pygame.display.set_mode(self.windowSize)
-        pygame.display.set_caption("A* Path Finder")
         self.bg_color = (200,200,200)
         self.Manager = multiprocessing.Manager()
+        self.windowSize = (self.__x_tiles * self.__tileSize + self.__borderSize, self.__y_tiles * self.__tileSize + self.__borderSize + self.__controlPanelSize)
+        self.window = pygame.display.set_mode(self.windowSize)
+        pygame.display.set_caption("A* Path Finder")
         self.reset()
 
     def reset(self):
@@ -270,11 +272,14 @@ class MapCreationWindow(object):
                 if tile != None:
                     tile.color = (0,128,255)
                 self.updated_tiles.add(node)
+        #If the process is not set, draw the final path on the display
         elif self.Process != None:
             for node in self.shared_memory["path"]:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
                     tile.color = (0,255,0)
+                    tile.draw()
+            pygame.display.update()
             temp = tk.Tk()
             timeTaken = self.shared_memory["time taken"]
             nodesConsidered = self.shared_memory["nodes considered"]
@@ -282,6 +287,15 @@ class MapCreationWindow(object):
             temp.withdraw()
             messageBox.show()
             self.Process = None
+
+    def draw_control_panel(self):
+        "Draw the instructions at the bottom of the screen"
+        mousePos = pygame.mouse.get_pos()
+        font = pygame.font.Font("freesansbold.ttf", self.windowSize[0] // 60)
+        text = font.render("Controls: R - Reset screen, M1 - Remove tile, M2 - Reset tile, M3 - Set navigation node, ESC - Close window", True, (255,255,255), (0,0,0))
+        text_rect = text.get_rect()
+        text_rect.center = (self.windowSize[0] // 2, self.windowSize[1] - 50)
+        self.window.blit(text, text_rect)
     
     def open(self):
         "Opens the tiles window, and allows for editing."
@@ -319,6 +333,7 @@ class MapCreationWindow(object):
             window.fill(self.bg_color)
             for tile in tile_list:
                 tile.draw()
+            self.draw_control_panel()
             pygame.display.update()
         
         #Exit program
