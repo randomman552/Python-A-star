@@ -225,6 +225,7 @@ class MapCreationWindow(object):
                 self.__nav_num += 1
             elif mousePresses[2]:
                 tile.enabled = True
+                tile.state = 0
         
     def key_handler(self):
         "Handles key presses."
