@@ -102,9 +102,11 @@ class State_2D_Movement(State):
             return 0
         dist = 0
         if self.parent:
-            self.g = self.parent.g + 1
+            #Do this to prevent the algorithm from moving diagonally unless actually nessesary
+            vector = [self.parent.value[0] - self.value[0], self.parent.value[1] - self.value[1]]
+            self.g = self.parent.g + abs(vector[0]) + abs(vector[1])
             self.h = 0
-            for i in range(len(self.value) - 1):
+            for i in range(len(self.value)):
                 self.h += abs(self.value[i] - self.goal[i])
             dist = self.g + self.h
         else:
@@ -136,11 +138,11 @@ class AStar_Solver:
         if allowed_states == None or len(allowed_states) == 0:
             self.allowed_states = None
         else:
-            self.allowed_states = allowed_states
+            self.allowed_states = set(allowed_states)
         if forbidden_states == None or len(forbidden_states) == 0:
             self.forbidden_states = None
         else:
-            self.forbidden_states = forbidden_states
+            self.forbidden_states = set(forbidden_states)
         self.start_state = None
         self.time_taken = 0
         self.nodes_considered = 0
@@ -247,5 +249,5 @@ def Movement_2D_Solver_Example():
     print("Nodes Considered: " + str(a.nodes_considered))
 
 if __name__ == "__main__":
-    #Movement_2D_Solver_Example()
+    Movement_2D_Solver_Example()
     #String_Solver_Example()
