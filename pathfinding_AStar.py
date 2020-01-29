@@ -214,8 +214,8 @@ class MapCreationWindow(object):
     
     def __mousehandler(self):
         "Handles mouse actions."
-        #Prevent editing the grid after the route has started being generated.
-        if self.Process == None and len(self.shared_memory["path"]) == 0:
+        #Prevent editing the grid after the route has been generated.
+        if len(self.shared_memory["path"]) == 0:
             mousePresses = pygame.mouse.get_pressed()
             mousePosition = pygame.mouse.get_pos()
             tile = self.get_cur_tile(mousePosition)
@@ -330,11 +330,12 @@ class MapCreationWindow(object):
                 elif event.type == pygame.KEYUP:
                     keyDown = False
             
-            #Handle keyboard and mouse events
-            if mouseDown:
-                self.__mousehandler()
-            elif keyDown:
-                self.__key_handler()
+            #Handle keyboard and mouse events if process is not currently active
+            if self.Process == None:
+                if mouseDown:
+                    self.__mousehandler()
+                elif keyDown:
+                    self.__key_handler()
             
             #If the path has been set to -1, there is no path between the nav nodes, display an error message
             if self.shared_memory["path"] == -1:
