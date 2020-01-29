@@ -212,7 +212,7 @@ class MapCreationWindow(object):
         else:
             return None
     
-    def mouse_handler(self):
+    def __mousehandler(self):
         "Handles mouse actions."
         #Prevent editing the grid after the route has started being generated.
         if self.Process == None and len(self.shared_memory["path"]) == 0:
@@ -230,7 +230,7 @@ class MapCreationWindow(object):
                     tile.enabled = True
                     tile.state = 0
         
-    def key_handler(self):
+    def __key_handler(self):
         "Handles key presses."
         keyPresses = pygame.key.get_pressed()
         if keyPresses[pygame.K_r]:
@@ -303,7 +303,7 @@ class MapCreationWindow(object):
             messageBox.show()
             self.Process = None
 
-    def draw_control_panel(self):
+    def __draw_control_panel(self):
         "Draw the instructions at the bottom of the screen"
         font = pygame.font.Font("freesansbold.ttf", self.windowSize[0] // 60)
         text = font.render("Controls: R - Reset screen, M1 - Remove tile, M2 - Reset tile, M3 - Set navigation node, ESC - Close window", True, (255,255,255), (0,0,0))
@@ -332,9 +332,9 @@ class MapCreationWindow(object):
             
             #Handle keyboard and mouse events
             if mouseDown:
-                self.mouse_handler()
+                self.__mousehandler()
             elif keyDown:
-                self.key_handler()
+                self.__key_handler()
             
             #If the path has been set to -1, there is no path between the nav nodes, display an error message
             if self.shared_memory["path"] == -1:
@@ -352,7 +352,7 @@ class MapCreationWindow(object):
             window.fill(self.bg_color)
             for tile in self.tile_list:
                 tile.draw()
-            self.draw_control_panel()
+            self.__draw_control_panel()
             pygame.display.update()
         
         #Exit program
