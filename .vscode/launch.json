@@ -11,8 +11,5 @@
             "program": "${file}",
             "console": "integratedTerminal"
         }
-    ],
-    "python.linting.pylintArgs": [
-        "--unsafe-load-any-extension=y"
     ]
 }

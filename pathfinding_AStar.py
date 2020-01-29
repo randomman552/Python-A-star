@@ -291,7 +291,6 @@ class MapCreationWindow(object):
 
     def draw_control_panel(self):
         "Draw the instructions at the bottom of the screen"
-        mousePos = pygame.mouse.get_pos()
         font = pygame.font.Font("freesansbold.ttf", self.windowSize[0] // 60)
         text = font.render("Controls: R - Reset screen, M1 - Remove tile, M2 - Reset tile, M3 - Set navigation node, ESC - Close window", True, (255,255,255), (0,0,0))
         text_rect = text.get_rect()
@@ -323,10 +322,6 @@ class MapCreationWindow(object):
                 self.mouse_handler()
             elif keyDown:
                 self.key_handler()
-
-            #If the tile_list has been changed by another source, reasign it
-            if tile_list != self.tile_list:
-                tile_list = self.tile_list
             
             #If the path has been set to -1, there is no path between the nav nodes, display an error message
             if self.shared_memory["path"] == -1:
