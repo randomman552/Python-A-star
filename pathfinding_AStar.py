@@ -114,6 +114,7 @@ class DefineSettings(object):
     def close(self):
         "Close the window, returns self.settings"
         self.window.destroy()
+        self.window.quit()
         return self.settings
 
     def __quit(self):
@@ -206,26 +207,28 @@ class MapCreationWindow(object):
     def get_tile(self, x, y):
         """Returns the tile at the specified x and y in the tile list.\n
         If an invalid x or y coordinate is passed, will return none."""
-        if x <= self.__x_tiles and y <= self.__y_tiles:
+        if (x <= self.__x_tiles and x > 0) and (y <= self.__y_tiles and y > 0):
             return self.tile_list[((y - 1) * self.__x_tiles) + x - 1]
         else:
             return None
     
     def mouse_handler(self):
         "Handles mouse actions."
-        mousePresses = pygame.mouse.get_pressed()
-        mousePosition = pygame.mouse.get_pos()
-        tile = self.get_cur_tile(mousePosition)
-        if tile != None:
-            if mousePresses[0]:
-                tile.enabled = False
-            elif mousePresses[1]:
-                tile.enabled = True
-                tile.state = self.__nav_num
-                self.__nav_num += 1
-            elif mousePresses[2]:
-                tile.enabled = True
-                tile.state = 0
+        #Prevent editing the grid after the route has started being generated.
+        if self.Process == None and len(self.shared_memory["path"]) == 0:
+            mousePresses = pygame.mouse.get_pressed()
+            mousePosition = pygame.mouse.get_pos()
+            tile = self.get_cur_tile(mousePosition)
+            if tile != None:
+                if mousePresses[0]:
+                    tile.enabled = False
+                elif mousePresses[1]:
+                    tile.enabled = True
+                    tile.state = self.__nav_num
+                    self.__nav_num += 1
+                elif mousePresses[2]:
+                    tile.enabled = True
+                    tile.state = 0
         
     def key_handler(self):
         "Handles key presses."
@@ -237,11 +240,22 @@ class MapCreationWindow(object):
         elif keyPresses[pygame.K_RETURN]:
             self.start_pathfinding()
 
+    def __generate_base_forbidden(self):
+        "Returns the base of the forbidden list (forms a barrier around the arena to prevent pathfinding around obstacles)."
+        forbidden = []
+        for x in range(self.__x_tiles + 1):
+            forbidden.append((x, self.__y_tiles + 1))
+            forbidden.append((x, 0))
+        for y in range (self.__y_tiles + 1):
+            forbidden.append((self.__x_tiles + 1, y))
+            forbidden.append((0, y))
+        return forbidden
+
     def start_pathfinding(self):
         "Initialise the A* pathfinding algorithm"
         if self.Process == None:
             allowed_list = []
-            forbidden_list = []
+            forbidden_list = self.__generate_base_forbidden()
             nav_nodes = []
             #Go thorugh the tiles on screen, assigning each to an appropriate group
             for tile in self.tile_list:
@@ -303,7 +317,6 @@ class MapCreationWindow(object):
         mouseDown = False
         keyDown = False
         window = self.window
-        tile_list = self.tile_list
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -337,7 +350,7 @@ class MapCreationWindow(object):
             
             #Fill the window and draw the tiles on it
             window.fill(self.bg_color)
-            for tile in tile_list:
+            for tile in self.tile_list:
                 tile.draw()
             self.draw_control_panel()
             pygame.display.update()
@@ -394,13 +407,13 @@ class process(multiprocessing.Process):
                 self.PriorityQueue.put((0, count, startState))
                 while (not self.path) and (self.PriorityQueue.qsize()):
                     closestChild = self.PriorityQueue.get()[2]
-                    closestChild.CreateChildren()
+                    closestChild.CreateChildren(self.visitedQueue)
                     #If the goal and start value are the same, then nothing needs to be done.
                     if closestChild.value == self.goal:
                         self.path = closestChild.path
                         break
                     for child in closestChild.children:
-                        if not(closestChild.value in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
+                        if not(closestChild.value in self.visitedQueue):
                             count += 1
                             if not child.dist:
                                 self.path = child.path
