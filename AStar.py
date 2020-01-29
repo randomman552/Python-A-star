@@ -28,8 +28,9 @@ class State(object):
         "Placeholder function for getting distance"
         pass
 
-    def CreateChildren(self):
-        "Placeholder function for creating children of this state"
+    def CreateChildren(self, forbidden_states=set()):
+        """Placeholder function for creating children of this state\n
+        Can optionally be passed a forbidden_states set to prevent these states from being generated."""
         pass
 class State_String(State):
     "State class used with the String_Solver class"
@@ -60,7 +61,9 @@ class State_String(State):
                     goal_store.pop(goal_letter_pos)
         return dist
 
-    def CreateChildren(self):
+    def CreateChildren(self, forbidden_states=set()):
+        """Create the children of this state\n
+        Can optionally be passed a forbidden_states set to prevent these states from being generated."""
         if not self.children:
             #Generate all permutations of the string (with one swap)
             permutations = []
@@ -73,8 +76,10 @@ class State_String(State):
                         permutations.append(val)
             for item in permutations:
                 #Convert each permutation to a string and create objects
-                child = State_String(self.__toStr(item), self)
-                self.children.append(child)
+                string = self.__toStr(item)
+                if not(string in forbidden_states):
+                    child = State_String(string, self)
+                    self.children.append(child)
     
     def __toStr(self, Input):
         "Convert a list of characters into a string"
@@ -114,35 +119,29 @@ class State_2D_Movement(State):
             self.h = 0
         return dist
 
-    def CreateChildren(self):
+    def CreateChildren(self, forbidden_states=set()):
         if not self.children:
             allowed_moves = [[1,0],[0,1],[-1,0],[0,-1]]
             if self.diagonal_enabled:
                 allowed_moves += [[1,1],[1,-1],[-1,1],[-1,-1]]
             for i in allowed_moves:
-                val = [self.value[0] + i[0], self.value[1] + i[1]]
-                child = State_2D_Movement(val, self, self.diagonal_enabled)
-                self.children.append(child)
+                val = (self.value[0] + i[0], self.value[1] + i[1])
+                if not(val in forbidden_states):
+                    child = State_2D_Movement(val, self, self.diagonal_enabled)
+                    self.children.append(child)
 
 #Solvers
 class AStar_Solver:
     """Base A* solver class, all other solvers are to be based on this class.
     Look at the string_solver for an example of implementation."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set()):
+    def __init__(self, start, goal, allowed_states = set(), forbidden_states = set(), visitedQueue = set()):
         self.path = []
         self.visitedQueue = visitedQueue
         self.PriorityQueue = PriorityQueue()
         #Start and goal must be copies to prevent the solver from interacting with other components
         self.start = start[:]
         self.goal = goal[:]
-        if allowed_states == None or len(allowed_states) == 0:
-            self.allowed_states = None
-        else:
-            self.allowed_states = set(allowed_states)
-        if forbidden_states == None or len(forbidden_states) == 0:
-            self.forbidden_states = None
-        else:
-            self.forbidden_states = set(forbidden_states)
+        self.visitedQueue = set(set(forbidden_states) - set(allowed_states))
         self.start_state = None
         self.time_taken = 0
         self.nodes_considered = 0
@@ -160,13 +159,13 @@ class AStar_Solver:
             self.PriorityQueue.put((0, count, startState))
             while (not self.path) and (self.PriorityQueue.qsize()):
                 closestChild = self.PriorityQueue.get()[2]
-                closestChild.CreateChildren()
+                closestChild.CreateChildren(self.visitedQueue)
                 #If the goal and start value are the same, then nothing needs to be done.
                 if closestChild.value == self.goal:
                     self.path = closestChild.path
                     break
                 for child in closestChild.children:
-                    if not(closestChild.value in self.visitedQueue) and (self.allowed_states == None or child.value in self.allowed_states) and (self.forbidden_states == None or child.value not in self.forbidden_states):
+                    if not(closestChild.value in self.visitedQueue):
                         count += 1
                         if not child.dist:
                             self.path = child.path
@@ -193,7 +192,7 @@ class String_Solver(AStar_Solver):
     start = The start state of the string, e.g. 'bcda'.
     goal = The desired end state of the string, e.g. 'abcd'.
     allowed_states is an optional argument, when set it will prevent any children being created outside of these set states."""
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, visitedQueue = set()):
+    def __init__(self, start, goal, allowed_states = set(), forbidden_states = set(), visitedQueue = set()):
         super(String_Solver, self).__init__(start, goal, allowed_states, forbidden_states, visitedQueue)
         if not self.__validate():
             raise Exception("Invalid inputs")
@@ -214,7 +213,7 @@ class String_Solver(AStar_Solver):
                 return False
         return True
 class Movement_2D_Solver(AStar_Solver):
-    def __init__(self, start, goal, allowed_states = None, forbidden_states = None, diagonal_enabled = False, visitedQueue = set()):
+    def __init__(self, start, goal, allowed_states = None, forbidden_states = set(), diagonal_enabled = False, visitedQueue = set()):
         super(Movement_2D_Solver, self).__init__(tuple(start), tuple(goal), allowed_states, forbidden_states, visitedQueue)
         self.diagonal_enabled = diagonal_enabled
         self.start_state = self.__get_start_state()
