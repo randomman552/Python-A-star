@@ -215,7 +215,7 @@ class MapCreationWindow(object):
     def __mousehandler(self):
         "Handles mouse actions."
         #Prevent editing the grid after the route has been generated.
-        if len(self.shared_memory["path"]) == 0:
+        if len(self.shared_memory["visited"]) == 0:
             mousePresses = pygame.mouse.get_pressed()
             mousePosition = pygame.mouse.get_pos()
             tile = self.get_cur_tile(mousePosition)
@@ -289,19 +289,29 @@ class MapCreationWindow(object):
                 self.updated_tiles.add(node)
         #If the process is not set, draw the final path on the display
         elif self.Process != None:
-            for node in self.shared_memory["path"]:
-                tile = self.get_tile(node[0], node[1])
-                if tile != None:
-                    tile.color = (0,255,0)
-                    tile.draw()
-            pygame.display.update()
             temp = tk.Tk()
-            timeTaken = self.shared_memory["time taken"]
-            nodesConsidered = self.shared_memory["nodes considered"]
-            messageBox = ms_box.Message(temp, title="Operation complete", message=f"{timeTaken}ms taken.\n{nodesConsidered} nodes considered.", type=ms_box.OK)
             temp.withdraw()
+            #If the path has been set to -1, there is no path between the nav nodes, display an error message
+            if self.shared_memory["path"] == -1:
+                messageBox = ms_box.Message(temp, title="No path", message="No path", icon=ms_box.ERROR)
+            else:
+                for node in self.shared_memory["path"]:
+                    tile = self.get_tile(node[0], node[1])
+                    if tile != None:
+                        tile.color = (0,255,0)
+                        tile.draw()
+                #Update the display to show path
+                pygame.display.update()
+                timeTaken = self.shared_memory["time taken"]
+                nodesConsidered = self.shared_memory["nodes considered"]
+                messageBox = ms_box.Message(temp, title="Operation complete", message=f"{timeTaken}ms taken.\n{nodesConsidered} nodes considered.", type=ms_box.OK)
+                #Draw the path
             messageBox.show()
+            self.shared_memory["path"] = set()
+            #Set self.Process to None
             self.Process = None
+            
+            
 
     def __draw_control_panel(self):
         "Draw the instructions at the bottom of the screen"
@@ -336,16 +346,6 @@ class MapCreationWindow(object):
                     self.__mousehandler()
                 elif keyDown:
                     self.__key_handler()
-            
-            #If the path has been set to -1, there is no path between the nav nodes, display an error message
-            if self.shared_memory["path"] == -1:
-                temp = tk.Tk()
-                messageBox = ms_box.Message(temp, title="No path", message="No path", icon=ms_box.ERROR)
-                temp.withdraw()
-                messageBox.show()
-                self.shared_memory["path"] = set()
-                #Delete the references to the objects so they are garbage collected
-                del(temp, messageBox)
             
             self.update_tiles()
             
