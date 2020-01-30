@@ -16,7 +16,7 @@ class DefineSettings(object):
         #Settings
         if settings == None:
             self.settings = {
-                "tile size": 20,
+                "tile size": 15,
                 "grid size": {
                     "x": 50,
                     "y": 50
@@ -158,7 +158,7 @@ class MapCreationWindow(object):
         self.__controlPanelSize = 100
         self.diagonal_enabled = settings["diagonal enabled"]
         self.__output_progress = settings["draw progress"]
-        self.bg_color = (200,200,200)
+        self.__bg_color = settings["bg color"]
         self.Manager = multiprocessing.Manager()
         self.windowSize = (self.__x_tiles * self.__tileSize + self.__borderSize, self.__y_tiles * self.__tileSize + self.__borderSize + self.__controlPanelSize)
         self.window = pygame.display.set_mode(self.windowSize)
@@ -306,7 +306,7 @@ class MapCreationWindow(object):
     def __draw_control_panel(self):
         "Draw the instructions at the bottom of the screen"
         font = pygame.font.Font("freesansbold.ttf", self.windowSize[0] // 60)
-        text = font.render("Controls: R - Reset screen, M1 - Remove tile, M2 - Reset tile, M3 - Set navigation node, ESC - Close window", True, (255,255,255), (0,0,0))
+        text = font.render("Controls: R - Reset screen, M1 - Remove tile, M2 - Reset tile, M3 - Set navigation node, ESC - Close window", True, (0,0,0), self.__bg_color)
         text_rect = text.get_rect()
         text_rect.center = (self.windowSize[0] // 2, self.windowSize[1] - 50)
         self.window.blit(text, text_rect)
@@ -350,7 +350,7 @@ class MapCreationWindow(object):
             self.update_tiles()
             
             #Fill the window and draw the tiles on it
-            window.fill(self.bg_color)
+            window.fill(self.__bg_color)
             for tile in self.tile_list:
                 tile.draw()
             self.__draw_control_panel()
@@ -440,5 +440,6 @@ if __name__ == "__main__":
         settings = settings_window.open()
 
         settings["border"] = 10
+        settings["bg color"] = (200,200,200)
         Window = MapCreationWindow(settings)
         Window.open()
