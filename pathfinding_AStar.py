@@ -307,7 +307,6 @@ class MapCreationWindow(object):
                 messageBox = ms_box.Message(temp, title="Operation complete", message=f"{timeTaken}ms taken.\n{nodesConsidered} nodes considered.", type=ms_box.OK)
                 #Draw the path
             messageBox.show()
-            self.shared_memory["path"] = set()
             #Set self.Process to None
             self.Process = None
             
