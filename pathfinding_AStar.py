@@ -280,12 +280,13 @@ class MapCreationWindow(object):
     
     def update_tiles(self):
         "draw the current state of the tiles on screen"
-        if not(self.shared_memory["path"]) and self.__output_progress:
+        if not(self.shared_memory["path"]):
             visited_draw_list = set([tuple(node) for node in self.shared_memory["visited"] if node not in self.updated_tiles])
             for node in visited_draw_list:
                 tile = self.get_tile(node[0], node[1])
                 if tile != None:
-                    tile.color = (0,128,255)
+                    if self.__output_progress:
+                        tile.color = (0,128,255)
                 self.updated_tiles.add(node)
         #If the process is not set, draw the final path on the display
         elif self.Process != None:
