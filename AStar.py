@@ -109,7 +109,7 @@ class State_2D_Movement(State):
         if self.parent:
             #Do this to prevent the algorithm from moving diagonally unless actually nessesary
             vector = [self.parent.value[0] - self.value[0], self.parent.value[1] - self.value[1]]
-            self.g = self.parent.g + abs(vector[0]) + abs(vector[1])
+            self.g = abs(vector[0]) + abs(vector[1])
             self.h = 0
             for i in range(len(self.value)):
                 self.h += abs(self.value[i] - self.goal[i])
