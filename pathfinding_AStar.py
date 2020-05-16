@@ -5,20 +5,26 @@ import AStar
 import time
 import tkinter as tk
 from tkinter import messagebox as ms_box
-# TODO: Replace tiles system with something faster.
+from typing import Optional, Dict, Tuple
+
 # TODO: Add type annotations and other improvements.
 # TODO: Fix variable naming conventions.
 
 
 class DefineSettings(object):
-    """Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict.\n
-    Can be passed some default settings as an optional argument"""
+    """
+    Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict.\n
+    """
 
-    def __init__(self, settings=None):
-        # Window
+    def __init__(self, settings: Optional[Dict]):
+        """
+        @param settings (dict) - The default settings to load, defaults to None.
+        """
+
+        # Window - The tkinter display window.
         self.window = tk.Tk()
 
-        # Settings
+        # If Settings is equal to none, then load some default settings.
         if settings == None:
             self.settings = {
                 "tile size": 15,
@@ -29,122 +35,145 @@ class DefineSettings(object):
                 "draw progress": tk.BooleanVar(self.window, True),
                 "diagonal enabled": tk.BooleanVar(self.window, True)
             }
+        # If Settings alredy contains some values, just replace the draw progress
+        # and diagonal settings with the matching tk boolean variable.
         else:
-            self.settings = {
-                "tile size": settings["tile size"],
-                "grid size": {
-                    "x": settings["grid size"]["x"],
-                    "y": settings["grid size"]["y"]
-                },
-                "draw progress": tk.BooleanVar(self.window, settings["draw progress"]),
-                "diagonal enabled": tk.BooleanVar(self.window, settings["diagonal enabled"])
-            }
+            self.settings = settings
+            self.settings["draw progress"] = tk.BooleanVar(
+                self.window, settings["draw progress"])
+            self.settings["diagonal enabled"] = tk.BooleanVar(
+                self.window, settings["diagonal enabled"])
 
         # Tile size input
-        TileSize_Label = tk.Label(self.window, text="Tile size: ")
-        TileSize_Label.grid(column=1, row=0, sticky=tk.E, pady=(10, 0))
+        tile_size_label = tk.Label(self.window, text="Tile size: ")
+        tile_size_label.grid(column=1, row=0, sticky=tk.E, pady=(10, 0))
 
-        TileSize_Input = tk.Entry(self.window)
-        TileSize_Input.configure(width=3)
-        TileSize_Input.insert(0, self.settings["tile size"])
-        TileSize_Input.grid(column=2, row=0, sticky=tk.W, pady=(10, 0))
+        tile_size_input = tk.Entry(self.window)
+        tile_size_input.configure(width=3)
+        tile_size_input.insert(0, self.settings["tile size"])
+        tile_size_input.grid(column=2, row=0, sticky=tk.W, pady=(10, 0))
 
         # Grid size input
-        GridSizeX_Label = tk.Label(self.window, text="X:")
-        GridSizeX_Label.grid(column=1, row=1, sticky=tk.E)
+        grid_size_x_label = tk.Label(self.window, text="X:")
+        grid_size_x_label.grid(column=1, row=1, sticky=tk.E)
 
-        GridSizeY_Label = tk.Label(self.window, text="Y:")
-        GridSizeY_Label.grid(column=1, row=2, sticky=tk.E)
+        grid_size_y_label = tk.Label(self.window, text="Y:")
+        grid_size_y_label.grid(column=1, row=2, sticky=tk.E)
 
-        GridSizeX_Input = tk.Entry(self.window)
-        GridSizeX_Input.configure(width=3)
-        GridSizeX_Input.insert(0, self.settings["grid size"]["x"])
-        GridSizeX_Input.grid(column=2, row=1, sticky=tk.W)
+        grid_size_x_input = tk.Entry(self.window)
+        grid_size_x_input.configure(width=3)
+        grid_size_x_input.insert(0, self.settings["grid size"]["x"])
+        grid_size_x_input.grid(column=2, row=1, sticky=tk.W)
 
-        GridSizeY_Input = tk.Entry(self.window)
-        GridSizeY_Input.configure(width=3)
-        GridSizeY_Input.insert(0, self.settings["grid size"]["y"])
-        GridSizeY_Input.grid(column=2, row=2, sticky=tk.W)
+        grid_size_y_input = tk.Entry(self.window)
+        grid_size_y_input.configure(width=3)
+        grid_size_y_input.insert(0, self.settings["grid size"]["y"])
+        grid_size_y_input.grid(column=2, row=2, sticky=tk.W)
 
         # Draw all checkbox
-        DrawAll_CheckBox = tk.Checkbutton(
+        draw_all_input = tk.Checkbutton(
             self.window, variable=self.settings["draw progress"], onvalue=True, offvalue=False)
-        DrawAll_CheckBox.grid(column=2, row=3, sticky=tk.W)
+        draw_all_input.grid(column=2, row=3, sticky=tk.W)
 
-        DrawAll_Label = tk.Label(self.window, text="Draw progress")
-        DrawAll_Label.grid(column=1, row=3, sticky=tk.E)
+        draw_all_label = tk.Label(self.window, text="Draw progress")
+        draw_all_label.grid(column=1, row=3, sticky=tk.E)
 
         # Diagonal enabled
-        DiagonalEnabled_Checkbox = tk.Checkbutton(
+        diagonal_enabled_checkbox = tk.Checkbutton(
             self.window, variable=self.settings["diagonal enabled"], onvalue=True, offvalue=False)
-        DiagonalEnabled_Checkbox.grid(column=2, row=4, sticky=tk.W)
+        diagonal_enabled_checkbox.grid(column=2, row=4, sticky=tk.W)
 
-        DiagonalEnabled_Label = tk.Label(self.window, text="Diagonal?")
-        DiagonalEnabled_Label.grid(column=1, row=4, sticky=tk.E)
+        diagonal_enabled_label = tk.Label(self.window, text="Diagonal?")
+        diagonal_enabled_label.grid(column=1, row=4, sticky=tk.E)
 
         # Buttons
-        Submit_Button = tk.Button(
+        submit_button = tk.Button(
             self.window, text="Generate", command=lambda: self.__submit())
-        Submit_Button.grid(column=2, row=5, columnspan=2,
+        submit_button.grid(column=2, row=5, columnspan=2,
                            sticky=tk.W, padx=(0, 20), pady=(10, 20))
 
-        Cancel_Button = tk.Button(
+        cancel_button = tk.Button(
             self.window, text="Cancel", command=lambda: self.__quit())
-        Cancel_Button.grid(column=0, row=5, columnspan=2,
+        cancel_button.grid(column=0, row=5, columnspan=2,
                            sticky=tk.E, padx=(20, 0), pady=(10, 20))
 
-        # Set atributes
+        # Set window attributes
         self.window.resizable(0, 0)
         self.window.title('Define grid size.')
-        self.GridSize_Input = (GridSizeX_Input, GridSizeY_Input)
-        self.TileSize_Input = TileSize_Input
-        self.DrawAll_Input = DrawAll_CheckBox
+        self.grid_size_input = (grid_size_x_input, grid_size_y_input)
+        self.tile_size_input = tile_size_input
+        self.draw_all_input = draw_all_input
 
     def __submit(self):
-        "Action of the submit button, if invalid inputs are present, the program will ask the user to re-enter the details."
+        """
+        Action of the submit button, if invalid inputs are present, the program will ask the user to re-enter the details.
+        """
+
+        # Wrap in a try so that any invalid settings dont crash the program.
         try:
-            TileSize = int(self.TileSize_Input.get())
-            GridSizeX = int(self.GridSize_Input[0].get())
-            GridSizeY = int(self.GridSize_Input[1].get())
-            DrawAll = self.settings["draw progress"].get()
-            DiagonalEnabled = self.settings["diagonal enabled"].get()
+            tile_size = int(self.tile_size_input.get())
+            grid_size_x = int(self.grid_size_input[0].get())
+            grid_size_y = int(self.grid_size_input[1].get())
+            draw_all = self.settings["draw progress"].get()
+            diagonal_enabled = self.settings["diagonal enabled"].get()
             self.settings = {
-                "tile size": TileSize,
+                "tile size": tile_size,
                 "grid size": {
-                    "x": GridSizeX,
-                    "y": GridSizeY
+                    "x": grid_size_x,
+                    "y": grid_size_y
                 },
-                "draw progress": DrawAll,
-                "diagonal enabled": DiagonalEnabled
+                "draw progress": draw_all,
+                "diagonal enabled": diagonal_enabled
             }
+
+            # If the settings are updated successfully, close this window.
             self.close()
         except:
+            # Show an error message
             MessageBox = ms_box.Message(
                 self.window, icon=ms_box.WARNING, message="Invalid inputs.", title="Warning")
             MessageBox.show()
 
-    def close(self):
-        "Close the window, returns self.settings"
+    def close(self) -> dict:
+        """
+        Close the window, returns self.settings
+        """
+
         self.window.destroy()
         self.window.quit()
         return self.settings
 
     def __quit(self):
-        "Close the program"
+        """
+        Close the program
+        """
+
         quit()
 
-    def open(self):
-        "Open the window (use .close method to force close)"
+    def open(self) -> dict:
+        """
+        Open the window (use .close method to force close)
+        """
+
         self.window.mainloop()
         return self.settings
 
 
 class MapCreationWindow(object):
-    "Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm."
+    """
+    Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm.
+    """
 
-    def __init__(self, settings):
+    def __init__(self, settings: dict):
+        """
+        @param settings - The dict of settings created by the DefineSettings object.
+        """
+
+        # Init pygame
         pygame.init()
         pygame.font.init()
+
+        # TODO: JUST SAVE THE DICT
         self.__borderSize = settings["border"]
         self.__tileSize = settings["tile size"]
         self.__x_tiles = settings["grid size"]["x"]
@@ -153,15 +182,24 @@ class MapCreationWindow(object):
         self.diagonal_enabled = settings["diagonal enabled"]
         self.__output_progress = settings["draw progress"]
         self.__bg_color = settings["bg color"]
+
+        # Initalise the multiprocessing manager (used for shared memory with the solving process)
         self.Manager = multiprocessing.Manager()
+
+        # Initalise the pygame window
         self.windowSize = (self.__x_tiles * self.__tileSize + self.__borderSize,
                            self.__y_tiles * self.__tileSize + self.__borderSize + self.__controlPanelSize)
         self.window = pygame.display.set_mode(self.windowSize)
         pygame.display.set_caption("A* Path Finder")
+
+        # Call reset to carry out the rest of the setup process for us
         self.reset()
 
     def reset(self):
-        "Reset the map to its default state"
+        """
+        Reset the object to its default state
+        """
+
         self.Process = None
         self.shared_memory = self.Manager.dict({
             "visited": set(),
@@ -169,7 +207,6 @@ class MapCreationWindow(object):
             "nodes considered": 0,
             "time taken": 0
         })
-        self.__nav_num = 0
         self.updated_tiles = set()
 
         # Create the tiles matrix
@@ -185,51 +222,52 @@ class MapCreationWindow(object):
         tile_y = int((pos[1] - self.__borderSize // 2) / self.__tileSize)
         return (tile_x, tile_y)
 
-    def __mousehandler(self) -> None:
+    def __mouse_handler(self) -> None:
         """
         Handles mouse actions.
         """
 
         # Prevent editing the grid after the route has been generated.
         if len(self.shared_memory["visited"]) == 0:
-            mousePresses = pygame.mouse.get_pressed()
-            mousePosition = pygame.mouse.get_pos()
-            tile_pos = self.get_tile_coords(mousePosition)
+            mouse_presses = pygame.mouse.get_pressed()
+            mouse_position = pygame.mouse.get_pos()
+            tile_pos = self.get_tile_coords(mouse_position)
 
             # Check if tile position is within the bounds of the map.
             if tile_pos[0] < len(self.__tiles) and tile_pos[1] < len(self.__tiles[0]):
 
                 # If user left clicks on a tile, hide it
-                if mousePresses[0]:
+                if mouse_presses[0]:
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 1
                 # If a user middle clicks on the tile, make it into a nav node.
-                elif mousePresses[1]:
+                elif mouse_presses[1]:
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 2
                 # If a user right clicks on a tile, reset it to the default state
-                elif mousePresses[2]:
+                elif mouse_presses[2]:
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 0
 
     def __key_handler(self) -> None:
         """
-        Handles key presses.
+        Handles key actions.
         """
 
-        keyPresses = pygame.key.get_pressed()
-        if keyPresses[pygame.K_r]:
+        key_presses = pygame.key.get_pressed()
+        if key_presses[pygame.K_r]:
             self.reset()
-        elif keyPresses[pygame.K_ESCAPE]:
+        elif key_presses[pygame.K_ESCAPE]:
             self.close()
-        elif keyPresses[pygame.K_RETURN]:
+        elif key_presses[pygame.K_RETURN]:
             self.start_pathfinding()
 
-    def start_pathfinding(self) -> None:
+    def start_pathfinding(self):
         """
         Initialise the A* pathfinding algorithm
         """
 
         def generate_base_forbidden() -> set:
             """
-            Returns the base of the forbidden list (forms a barrier around the arena to prevent pathfinding around obstacles).
+            Returns the base of the forbidden list (forms a barrier around the arena to prevent pathfinding around obstacles).\n
+            Actually generates a wall which is 1 tile outside of the board space.
             """
 
             forbidden = set()
@@ -271,10 +309,12 @@ class MapCreationWindow(object):
                 temp.withdraw()
                 messagebox.show()
             else:
-                # Add the forbidden_
+                # Add the forbidden and nav tiles to the updated tiles, so they are not changed by the update_tiles method.
                 self.updated_tiles = forbidden_set.copy()
+                self.updated_tiles = self.updated_tiles.union(nav_nodes)
+
                 # Create and start process
-                self.Process = process(
+                self.Process = Process(
                     nav_nodes[0], nav_nodes[1], self.shared_memory, allowed_set, forbidden_set, self.diagonal_enabled)
                 self.Process.start()
 
@@ -286,14 +326,12 @@ class MapCreationWindow(object):
         visited_draw_set = set(
             node for node in self.shared_memory["visited"] if node not in self.updated_tiles)
         for node in visited_draw_set:
-            # Check the node is not in the path
-            if node not in self.shared_memory["path"]:
-                # Check the node is in bounds
-                if (node[0] >= 0 and node[0] < self.__x_tiles) and (node[1] >= 0 and node[1] < self.__y_tiles):
-                    self.__tiles[node[0]][node[1]] = -1
-                    self.updated_tiles.add(node)
+            # Check the node is in bounds
+            if (node[0] >= 0 and node[0] < self.__x_tiles) and (node[1] >= 0 and node[1] < self.__y_tiles):
+                self.__tiles[node[0]][node[1]] = -1
+                self.updated_tiles.add(node)
 
-        if self.shared_memory["path"]:
+        if self.shared_memory["path"] != -1:
             self.Process = None
             for node in self.shared_memory["path"]:
                 # Check the node is in bounds
@@ -304,6 +342,7 @@ class MapCreationWindow(object):
         """
         This function draws the interface on the pygame window.
         """
+
         def draw_tiles():
             """
             Draw the updated tiles on the screen.
@@ -364,28 +403,33 @@ class MapCreationWindow(object):
         pygame.display.update()
 
     def open(self):
-        "Opens the tiles window, and allows for editing."
+        """
+        Opens the tiles window, and allows for editing.
+        """
+
         self.running = True
-        mouseDown = False
-        keyDown = False
+        mouse_down = False
+        key_down = False
+
+        # Main event loop
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.close()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    mouseDown = True
+                    mouse_down = True
                 elif event.type == pygame.MOUSEBUTTONUP:
-                    mouseDown = False
+                    mouse_down = False
                 elif event.type == pygame.KEYDOWN:
-                    keyDown = True
+                    key_down = True
                 elif event.type == pygame.KEYUP:
-                    keyDown = False
+                    key_down = False
 
             # Handle keyboard and mouse events if process is not currently active
             if self.Process == None:
-                if mouseDown:
-                    self.__mousehandler()
-                elif keyDown:
+                if mouse_down:
+                    self.__mouse_handler()
+                elif key_down:
                     self.__key_handler()
 
             # Update the tiles matrix
@@ -394,49 +438,73 @@ class MapCreationWindow(object):
             # Call the draw function to update the display
             self.__draw()
 
-        # Exit program
+        # Exit this window
         if self.Process != None:
             self.Process.close()
         pygame.quit()
 
     def close(self):
+        """
+        Close the map window.
+        """
+
         self.running = False
 
 
-class process(multiprocessing.Process):
+# TODO: Make this more general, and move to separate file.
+class Process(multiprocessing.Process):
     "For running the pathfinding process on another process (to allow for updating of the pygame display to happen in parallel)"
 
-    def __init__(self, start, goal, shared_memory, allowed_list, forbidden_list, diagonal_enabled):
-        super(process, self).__init__()
+    def __init__(self, start: Tuple[int, int], goal: Tuple[int, int], shared_memory: dict, allowed_set: set, forbidden_set: set, diagonal_enabled: bool):
+        """
+        @param start (Tuple[int, int]) - The coordinates to start at.\n
+        @param goal (Tuple[int, int]) - The coordinates to end at.\n
+        @param shared_memory (dict) - The shared memory object created by the MapCreationWindow object.\n
+        @param allowed_set (set) - The set of allowed locations for the solver.\n
+        @param forbidden_set (set) - The set of forbidden locations for the solver.\n
+        @param diagonal_enabled (bool) - Whether diagonal movement is allowed.
+        """
+
+        super(Process, self).__init__()
         self.start_pos = start
         self.goal_pos = goal
+
         self.shared_memory = shared_memory
-        self.allowed_states = allowed_list
-        self.forbidden_states = forbidden_list
+        self.allowed_states = allowed_set
+        self.forbidden_states = forbidden_set
         self.diagonal_enabled = diagonal_enabled
 
     def run(self):
-        a = self.Movement_2D_Solver(self.start_pos, self.goal_pos, self.shared_memory,
-                                    self.allowed_states, self.forbidden_states, self.diagonal_enabled)
+        """
+        Override of the normal process run method, creates and runs the solver.\n
+        If there is no path, it will cancel and set the "path" in shared memory to -1.
+        """
+
+        # Instantiate sovler
+        solver = self.Movement2DSolver(
+            self.start_pos, self.goal_pos, self.shared_memory, self.allowed_states, self.forbidden_states, self.diagonal_enabled)
+
         try:
-            a.Solve()
+            solver.Solve()
         except Exception as e:
             self.shared_memory["path"] = -1
             print(e)
-        self.shared_memory["nodes considered"] = a.nodes_considered
-        self.shared_memory["time taken"] = a.time_taken
 
-    class Movement_2D_Solver(AStar.Movement_2D_Solver):
-        "Sub-class of the normal Movement_2D_Solver in order make sure data is recieved properly by the main process."
+        self.shared_memory["nodes considered"] = solver.nodes_considered
+        self.shared_memory["time taken"] = solver.time_taken
 
-        def __init__(self, start, goal, shared_memory, allowed_states=None, forbidden_states=None, diagonal_enabled=False):
-            super().__init__(tuple(start), tuple(goal), allowed_states, forbidden_states)
+    class Movement2DSolver(AStar.Movement2DSolver):
+        """Sub-class of the normal Movement2DSolver in order make sure data is recieved properly by the main process."""
+
+        def __init__(self, start: Tuple[int, int], goal: Tuple[int, int], shared_memory: dict, allowed_states: Optional[set], forbidden_states: Optional[set], diagonal_enabled=False):
+            super().__init__(tuple(start), tuple(goal),
+                             diagonal_enabled, allowed_states, forbidden_states)
             self.shared_memory = shared_memory
             self.diagonal_enabled = diagonal_enabled
             self.start_state = self.__get_start_state()
 
         def __get_start_state(self):
-            return AStar.State_2D_Movement(self.start, 0, self.diagonal_enabled, self.start, self.goal)
+            return AStar.State2DMovement(self.start, 0, self.start, self.goal, self.diagonal_enabled)
 
         def Solve(self):
             """Creates a solution on how to get from the start, to the goal.\n
@@ -448,23 +516,24 @@ class process(multiprocessing.Process):
             # Check if startState is set.
             if startState != None:
                 count = 0
-                self.PriorityQueue.put((0, count, startState))
-                while (not self.path) and (self.PriorityQueue.qsize()):
-                    closestChild = self.PriorityQueue.get()[2]
-                    closestChild.CreateChildren(self.visitedQueue)
+                self.priority_queue.put((0, count, startState))
+                while (not self.path) and (self.priority_queue.qsize()):
+                    closestChild: AStar.State2DMovement = self.priority_queue.get()[
+                        2]
+                    closestChild.create_children(self.visited_queue)
                     # If the goal and start value are the same, then nothing needs to be done.
                     if closestChild.value == self.goal:
                         self.path = closestChild.path
                         break
                     for child in closestChild.children:
-                        if not(closestChild.value in self.visitedQueue):
+                        if not(closestChild.value in self.visited_queue):
                             count += 1
                             if not child.dist:
                                 self.path = child.path
                                 break
-                            self.PriorityQueue.put((child.dist, count, child))
-                    self.visitedQueue.add(closestChild.value)
-                    self.shared_memory["visited"] = self.visitedQueue
+                            self.priority_queue.put((child.dist, count, child))
+                    self.visited_queue.add(closestChild.value)
+                    self.shared_memory["visited"] = self.visited_queue
                 if not self.path:
                     raise Exception("No path")
                 end_time = time.time()

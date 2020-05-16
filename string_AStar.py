@@ -4,65 +4,102 @@ import tkinter.scrolledtext as tkst
 import AStar
 import random
 
-String_Change = tk.Tk()
-String_Change.resizable(0,0)
-String_Change.title('A* - String Change')
-ForDisplay = [] # List to store all elements for the display.
+# Create tkinter window
+string_change = tk.Tk()
+string_change.resizable(0, 0)
+string_change.title('A* - String Change')
 
-#Start Input
-StartInput = tk.Entry(String_Change)
-StartInput.grid(column=2, row=2, sticky=tk.W)
-StartInputLabel = tk.Label(String_Change, text="Enter start text here: ")
-StartInputLabel.grid(column=1, row=2, sticky=tk.E)
+# Start Input
+start_input = tk.Entry(string_change)
+start_input.grid(column=2, row=2, sticky=tk.W)
+start_inputLabel = tk.Label(string_change, text="Enter start text here: ")
+start_inputLabel.grid(column=1, row=2, sticky=tk.E)
 
-#Goal Input
-GoalInput = tk.Entry(String_Change)
-GoalInput.grid(column=2, row=0, sticky=tk.W)
-StartInputLabel = tk.Label(String_Change, text="Enter goal text here: ")
-StartInputLabel.grid(column=1, row=0, sticky=tk.E)
+# Goal Input
+goal_input = tk.Entry(string_change)
+goal_input.grid(column=2, row=0, sticky=tk.W)
+start_inputLabel = tk.Label(string_change, text="Enter goal text here: ")
+start_inputLabel.grid(column=1, row=0, sticky=tk.E)
 
-#Submit button
+# Submit button
+
+submit = tk.Button(string_change, text="submit",
+                   command=lambda: submit_action())
+submit.grid(column=2, row=3, sticky=tk.W, padx=(5, 0))
+
+
 def submit_action():
-    Submit.configure(state=tk.DISABLED)
-    Shuffle.configure(state=tk.DISABLED)
-    goal = GoalInput.get()
-    start = StartInput.get()
+    """
+    Submit the information and begin the string reorganisation process.
+    """
+
+    # Disable the buttons
+    submit.configure(state=tk.DISABLED)
+    shuffle.configure(state=tk.DISABLED)
+
+    # Get our start and goal strings
+    goal = goal_input.get()
+    start = start_input.get()
+
+    # Initalise variables to store results
     path = []
     time_taken = 0
-    nodes_considered = -0
+    nodes_considered = 0
+
+    # Create the sovler object, and initiate the solving process
     try:
-        a = AStar.String_Solver(start, goal)
+        a = AStar.StringSolver(start, goal)
         a.Solve()
         path = a.path
         time_taken = a.time_taken
         nodes_considered = a.nodes_considered
-    except: 
+    except:
         path = ["No path"]
-    OutputBox.configure(state=tk.NORMAL)
-    OutputBox.delete(1.0, tk.END)
-    for num,step in enumerate(path):
-        OutputBox.insert(tk.END, str(num) + ": " + str(step) + "\n")
-    OutputBox.insert(tk.END, "Time Taken: " + str(time_taken) + "ms\n")
-    OutputBox.insert(tk.END, "Nodes Considered: " + str(nodes_considered) + "\n")
-    OutputBox.configure(state=tk.DISABLED)
-    Submit.configure(state=tk.NORMAL)
-    Shuffle.configure(state=tk.NORMAL)
-Submit = tk.Button(String_Change, text="Submit", command=lambda: submit_action())
-Submit.grid(column=2, row=3, sticky=tk.W, padx=(5,0))
 
-#Auto-shuffle button:
+    # Enable the output box and empty it
+    output_box.configure(state=tk.NORMAL)
+    output_box.delete(1.0, tk.END)
+
+    # Put the results in the output box
+    for num, step in enumerate(path):
+        output_box.insert(tk.END, str(num) + ": " + str(step) + "\n")
+    output_box.insert(tk.END, "Time Taken: " + str(time_taken) + "ms\n")
+    output_box.insert(tk.END, "Nodes Considered: " +
+                      str(nodes_considered) + "\n")
+
+    # Disable the output box so the user can't type in it
+    output_box.configure(state=tk.DISABLED)
+
+    # Re-enable submit and shuffle buttons
+    submit.configure(state=tk.NORMAL)
+    shuffle.configure(state=tk.NORMAL)
+
+# Auto-shuffle button
+
+
+shuffle = tk.Button(string_change, text="shuffle",
+                    command=lambda: shuffle_action(goal_input.get()))
+shuffle.grid(column=1, row=3, sticky=tk.E, padx=(0, 5))
+
+
 def shuffle_action(goal):
+    """
+    Shuffle the text in the start box and put the results in the goal text box.
+    """
+
     temp = list(goal)
     random.shuffle(temp)
     start = ""
     for char in temp:
         start += char
-    StartInput.delete(0, tk.END)
-    StartInput.insert(0, start)
-Shuffle = tk.Button(String_Change, text="Shuffle", command=lambda: shuffle_action(GoalInput.get()))
-Shuffle.grid(column=1, row=3, sticky=tk.E, padx=(0,5))
+    start_input.delete(0, tk.END)
+    start_input.insert(0, start)
 
-#Output
-OutputBox = tkst.ScrolledText(String_Change, state=tk.DISABLED, width=40, height=10)
-OutputBox.grid(column=0, columnspan=4, row=4, rowspan=1)
-String_Change.mainloop()
+
+# Output box
+output_box = tkst.ScrolledText(
+    string_change, state=tk.DISABLED, width=40, height=10)
+output_box.grid(column=0, columnspan=4, row=4, rowspan=1)
+
+# Open the window
+string_change.mainloop()
