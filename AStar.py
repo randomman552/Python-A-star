@@ -169,7 +169,7 @@ class State2DMovement(State):
             vector = [self.parent.value[0] - self.value[0],
                       self.parent.value[1] - self.value[1]]
 
-            self.g = abs(vector[0]) + abs(vector[1])
+            self.g = self.parent.g + abs(vector[0]) + abs(vector[1])
 
             # Calculate the distance between this state and the goal state (h).
             self.h = 0
@@ -198,8 +198,8 @@ class State2DMovement(State):
                 allowed_moves += [[1, 1], [1, -1], [-1, 1], [-1, -1]]
 
             # Create new state objects with the vectors
-            for i in allowed_moves:
-                val = (self.value[0] + i[0], self.value[1] + i[1])
+            for vector in allowed_moves:
+                val = (self.value[0] + vector[0], self.value[1] + vector[1])
                 if not(val in forbidden_states):
                     child = State2DMovement(
                         val, self, diagonal_enabled=self.diagonal_enabled)

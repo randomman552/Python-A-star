@@ -5,6 +5,7 @@ import AStar_multiprocessing
 import tkinter as tk
 from tkinter import messagebox as ms_box
 from typing import Optional, Dict, Tuple
+import sys
 
 
 class DefineSettings(object):
@@ -137,7 +138,7 @@ class DefineSettings(object):
     def __quit(self):
         """Close the program"""
 
-        quit()
+        sys.exit(0)
 
     def open(self) -> dict:
         """Open the window (use .close method to force close)"""
