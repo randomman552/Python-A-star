@@ -1,25 +1,20 @@
 #!/usr/bin/python3
 import pygame
 import multiprocessing
-import AStar
-import time
+import AStar_multiprocessing
 import tkinter as tk
 from tkinter import messagebox as ms_box
 from typing import Optional, Dict, Tuple
 
-# TODO: Add type annotations and other improvements.
-# TODO: Fix variable naming conventions.
-
 
 class DefineSettings(object):
     """
-    Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict.\n
+    Define settings window can be opened by calling the .open method. It then returns the settings in the form of a dict.
+        Init parameters:
+            settings (dict) - The default settings to load, defaults to None.
     """
 
     def __init__(self, settings: Optional[Dict]):
-        """
-        @param settings (dict) - The default settings to load, defaults to None.
-        """
 
         # Window - The tkinter display window.
         self.window = tk.Tk()
@@ -105,9 +100,7 @@ class DefineSettings(object):
         self.draw_all_input = draw_all_input
 
     def __submit(self):
-        """
-        Action of the submit button, if invalid inputs are present, the program will ask the user to re-enter the details.
-        """
+        """Action of the submit button, if invalid inputs are present, the program will ask the user to re-enter the details."""
 
         # Wrap in a try so that any invalid settings dont crash the program.
         try:
@@ -135,25 +128,19 @@ class DefineSettings(object):
             MessageBox.show()
 
     def close(self) -> dict:
-        """
-        Close the window, returns self.settings
-        """
+        """Close the window, returns self.settings"""
 
         self.window.destroy()
         self.window.quit()
         return self.settings
 
     def __quit(self):
-        """
-        Close the program
-        """
+        """Close the program"""
 
         quit()
 
     def open(self) -> dict:
-        """
-        Open the window (use .close method to force close)
-        """
+        """Open the window (use .close method to force close)"""
 
         self.window.mainloop()
         return self.settings
@@ -162,18 +149,16 @@ class DefineSettings(object):
 class MapCreationWindow(object):
     """
     Pygame window with removable tiles, allows for editing of the map and running of the path finding algorithm.
+        Init parameters:
+            settings - The dict of settings created by the DefineSettings object.
     """
 
     def __init__(self, settings: dict):
-        """
-        @param settings - The dict of settings created by the DefineSettings object.
-        """
 
         # Init pygame
         pygame.init()
         pygame.font.init()
 
-        # TODO: JUST SAVE THE DICT
         self.__borderSize = settings["border"]
         self.__tileSize = settings["tile size"]
         self.__x_tiles = settings["grid size"]["x"]
@@ -196,9 +181,7 @@ class MapCreationWindow(object):
         self.reset()
 
     def reset(self):
-        """
-        Reset the object to its default state
-        """
+        """Reset the object to its default state"""
 
         self.Process = None
         self.shared_memory = self.Manager.dict({
@@ -214,18 +197,14 @@ class MapCreationWindow(object):
                         for _ in range(self.__y_tiles)]
 
     def get_tile_coords(self, pos: tuple) -> tuple:
-        """
-        When given an x and y coordinate in the form (x,y) will return the coords of the tile that occupies that space.
-        """
+        """When given an x and y coordinate in the form (x,y) will return the coords of the tile that occupies that space."""
 
         tile_x = int((pos[0] - self.__borderSize // 2) / self.__tileSize)
         tile_y = int((pos[1] - self.__borderSize // 2) / self.__tileSize)
         return (tile_x, tile_y)
 
     def __mouse_handler(self) -> None:
-        """
-        Handles mouse actions.
-        """
+        """Handles mouse actions."""
 
         # Prevent editing the grid after the route has been generated.
         if len(self.shared_memory["visited"]) == 0:
@@ -247,9 +226,7 @@ class MapCreationWindow(object):
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 0
 
     def __key_handler(self) -> None:
-        """
-        Handles key actions.
-        """
+        """Handles key actions."""
 
         key_presses = pygame.key.get_pressed()
         if key_presses[pygame.K_r]:
@@ -260,9 +237,7 @@ class MapCreationWindow(object):
             self.start_pathfinding()
 
     def start_pathfinding(self):
-        """
-        Initialise the A* pathfinding algorithm
-        """
+        """Initialise the A* pathfinding algorithm"""
 
         def generate_base_forbidden() -> set:
             """
@@ -314,14 +289,12 @@ class MapCreationWindow(object):
                 self.updated_tiles = self.updated_tiles.union(nav_nodes)
 
                 # Create and start process
-                self.Process = Process(
+                self.Process = AStar_multiprocessing.Movement2DProcess(
                     nav_nodes[0], nav_nodes[1], self.shared_memory, allowed_set, forbidden_set, self.diagonal_enabled)
                 self.Process.start()
 
     def update_tiles(self) -> None:
-        """
-        Update the tiles in the matrix to represent the algorithms progress.
-        """
+        """Update the tiles in the matrix to represent the algorithms progress."""
 
         visited_draw_set = set(
             node for node in self.shared_memory["visited"] if node not in self.updated_tiles)
@@ -339,14 +312,10 @@ class MapCreationWindow(object):
                     self.__tiles[node[0]][node[1]] = -2
 
     def __draw(self) -> None:
-        """
-        This function draws the interface on the pygame window.
-        """
+        """This function draws the interface on the pygame window."""
 
         def draw_tiles():
-            """
-            Draw the updated tiles on the screen.
-            """
+            """Draw the updated tiles on the screen."""
 
             # For each tile on the screen, draw the tile
             for x in range(len(self.__tiles)):
@@ -379,9 +348,7 @@ class MapCreationWindow(object):
                         self.window, color, (draw_x + 1, draw_y + 1, self.__tileSize - 2, self.__tileSize - 2))
 
         def draw_control_panel():
-            """
-            Draw the instructions at the bottom of the screen
-            """
+            """Draw the instructions at the bottom of the screen"""
 
             font = pygame.font.Font(
                 "freesansbold.ttf", self.windowSize[0] // 60)
@@ -403,9 +370,7 @@ class MapCreationWindow(object):
         pygame.display.update()
 
     def open(self):
-        """
-        Opens the tiles window, and allows for editing.
-        """
+        """Opens the tiles window, and allows for editing."""
 
         self.running = True
         mouse_down = False
@@ -438,113 +403,14 @@ class MapCreationWindow(object):
             # Call the draw function to update the display
             self.__draw()
 
-        # Exit this window
         if self.Process != None:
             self.Process.close()
         pygame.quit()
 
     def close(self):
-        """
-        Close the map window.
-        """
+        """Close the map window."""
 
         self.running = False
-
-
-# TODO: Make this more general, and move to separate file.
-class Process(multiprocessing.Process):
-    "For running the pathfinding process on another process (to allow for updating of the pygame display to happen in parallel)"
-
-    def __init__(self, start: Tuple[int, int], goal: Tuple[int, int], shared_memory: dict, allowed_set: set, forbidden_set: set, diagonal_enabled: bool):
-        """
-        @param start (Tuple[int, int]) - The coordinates to start at.\n
-        @param goal (Tuple[int, int]) - The coordinates to end at.\n
-        @param shared_memory (dict) - The shared memory object created by the MapCreationWindow object.\n
-        @param allowed_set (set) - The set of allowed locations for the solver.\n
-        @param forbidden_set (set) - The set of forbidden locations for the solver.\n
-        @param diagonal_enabled (bool) - Whether diagonal movement is allowed.
-        """
-
-        super(Process, self).__init__()
-        self.start_pos = start
-        self.goal_pos = goal
-
-        self.shared_memory = shared_memory
-        self.allowed_states = allowed_set
-        self.forbidden_states = forbidden_set
-        self.diagonal_enabled = diagonal_enabled
-
-    def run(self):
-        """
-        Override of the normal process run method, creates and runs the solver.\n
-        If there is no path, it will cancel and set the "path" in shared memory to -1.
-        """
-
-        # Instantiate sovler
-        solver = self.Movement2DSolver(
-            self.start_pos, self.goal_pos, self.shared_memory, self.allowed_states, self.forbidden_states, self.diagonal_enabled)
-
-        try:
-            solver.Solve()
-        except Exception as e:
-            self.shared_memory["path"] = -1
-            print(e)
-
-        self.shared_memory["nodes considered"] = solver.nodes_considered
-        self.shared_memory["time taken"] = solver.time_taken
-
-    class Movement2DSolver(AStar.Movement2DSolver):
-        """Sub-class of the normal Movement2DSolver in order make sure data is recieved properly by the main process."""
-
-        def __init__(self, start: Tuple[int, int], goal: Tuple[int, int], shared_memory: dict, allowed_states: Optional[set], forbidden_states: Optional[set], diagonal_enabled=False):
-            super().__init__(tuple(start), tuple(goal),
-                             diagonal_enabled, allowed_states, forbidden_states)
-            self.shared_memory = shared_memory
-            self.diagonal_enabled = diagonal_enabled
-            self.start_state = self.__get_start_state()
-
-        def __get_start_state(self):
-            return AStar.State2DMovement(self.start, 0, self.start, self.goal, self.diagonal_enabled)
-
-        def Solve(self):
-            """Creates a solution on how to get from the start, to the goal.\n
-            This method returns the path created, but it can also be gained by using the .path atribute.\n
-            The .paths_considered and .time_taken atributes can be looked at if you want to gauge the performance of this algorithm.\n
-            If no solution is found, this method will raise an exception, which can then be caught with a try except."""
-            start_time = time.time()
-            startState = self.start_state
-            # Check if startState is set.
-            if startState != None:
-                count = 0
-                self.priority_queue.put((0, count, startState))
-                while (not self.path) and (self.priority_queue.qsize()):
-                    closestChild: AStar.State2DMovement = self.priority_queue.get()[
-                        2]
-                    closestChild.create_children(self.visited_queue)
-                    # If the goal and start value are the same, then nothing needs to be done.
-                    if closestChild.value == self.goal:
-                        self.path = closestChild.path
-                        break
-                    for child in closestChild.children:
-                        if not(closestChild.value in self.visited_queue):
-                            count += 1
-                            if not child.dist:
-                                self.path = child.path
-                                break
-                            self.priority_queue.put((child.dist, count, child))
-                    self.visited_queue.add(closestChild.value)
-                    self.shared_memory["visited"] = self.visited_queue
-                if not self.path:
-                    raise Exception("No path")
-                end_time = time.time()
-                self.time_taken = int(round((end_time - start_time) * 1000, 0))
-                self.nodes_considered = count
-                self.shared_memory["path"] = set(self.path)
-                return self.path
-            else:
-                # If the startState is not set, raise an exception
-                raise Exception(
-                    "startState is not set. Are you instansiating the wrong class?")
 
 
 if __name__ == "__main__":

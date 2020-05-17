@@ -147,7 +147,7 @@ class State2DMovement(State):
             diagonal_enabled (bool) - Whether diagonal moving is enabled.
     """
 
-    def __init__(self, value: Tuple[int, int], parent: State, start: Optional[Tuple[int, int]] = None, goal: Optional[Tuple[int, int]] = None, diagonal_enabled: Optional[bool] = False):
+    def __init__(self, value: Tuple[int, int], parent: Optional[State] = 0, start: Optional[Tuple[int, int]] = None, goal: Optional[Tuple[int, int]] = None, diagonal_enabled: Optional[bool] = False):
 
         super(State2DMovement, self).__init__(
             tuple(value), parent, start, goal)
@@ -213,8 +213,11 @@ class AStarSolver:
     Base A* solver class, all other solvers are to be based on this class.
         How to use:
             In order to create a functional solver based on this, you must overload the following methods:
-            __get_state_state(self) - Should return the starting state for the solver you are implementing.
-            __validate(self) - A function that validates the variables passed to the object when creating it.
+            get_start_state(self) - Should return the starting state for the solver you are implementing.
+            validate(self) - A function that validates the variables passed to the object when creating it.
+            update(self) - A method which is called once per loop of the sovler, 
+            this can be used to update some external state for displaying progress, 
+            for exmaple you could use this with the multiprocessing library to update a shared memory object.
         Init parameters:
             start - The start value.
             goal - The goal the algorithm aims for.
@@ -243,7 +246,7 @@ class AStarSolver:
         self.time_taken = 0
         self.nodes_considered = 0
 
-    def Solve(self):
+    def solve(self):
         """
         Creates a solution on how to get from the start, to the goal.\n
         This method returns the path created, but it can also be gained by using the .path atribute.\n
@@ -252,14 +255,14 @@ class AStarSolver:
         """
 
         start_time = time.time()
-        startState = self.start_state
+        start_state = self.get_start_state()
 
-        # Check if startState is set.
-        if startState != None:
+        # Check if start_state is set.
+        if start_state:
             count = 0
 
             # Put the starting object into the priority queue
-            self.priority_queue.put((0, count, startState))
+            self.priority_queue.put((0, count, start_state))
 
             # Loop until the path is complete, or until the queue is emptied
             while (not self.path) and (self.priority_queue.qsize()):
@@ -283,28 +286,37 @@ class AStarSolver:
                 # Place the evalutaed child into the visited queue
                 self.visited_queue.add(closestChild.value)
 
-            # If the loop completes without setting the path, raise an exception
-            if not self.path:
-                raise Exception("No path")
+                # Call the update method, this won't do anything unless it is over riden by a sub-class
+                self.update()
 
             end_time = time.time()
             self.time_taken = int(round((end_time - start_time) * 1000, 0))
             self.nodes_considered = count
+
+            # If the loop completes without setting the path, raise an exception
+            if not self.path:
+                raise RuntimeError("No path")
+
             return self.path
         else:
-            # If the startState is not set, raise an exception
-            raise Exception(
-                "startState is not set. Are you instansiating the wrong class?")
+            # If the start_state is not set, raise an exception
+            raise RuntimeError(
+                "start_state is not set. Are you instansiating the wrong class?")
 
-    def __get_start_state(self) -> State:
+    def get_start_state(self) -> State:
         """Placeholder method for generating the starting state object."""
 
-        return None
+        return State(0, 0, 0, 0)
 
-    def __validate(self) -> bool:
+    def validate(self) -> bool:
         """Placehodler method for validating the starting information given to the solver."""
 
         return True
+
+    def update(self):
+        """Placeholder update method."""
+
+        pass
 
 
 class StringSolver(AStarSolver):
@@ -321,17 +333,17 @@ class StringSolver(AStarSolver):
     def __init__(self, start: str, goal: str, allowed_states: Optional[set] = set(), forbidden_states: Optional[set] = set(), visited_queue: Optional[set] = set()):
         super(StringSolver, self).__init__(start, goal,
                                            allowed_states, forbidden_states, visited_queue)
-        if not self.__validate():
+        if not self.validate():
             raise Exception("Invalid inputs")
         else:
-            self.start_state = self.__get_start_state()
+            self.start_state = self.get_start_state()
 
-    def __get_start_state(self) -> StateString:
+    def get_start_state(self) -> StateString:
         """Returns the first navigation state."""
 
         return StateString(self.start, 0, self.start, self.goal)
 
-    def __validate(self) -> bool:
+    def validate(self) -> bool:
         """Method for validating the starting information given to the solver."""
 
         for goal_char in self.goal:
@@ -361,12 +373,12 @@ class Movement2DSolver(AStarSolver):
         super(Movement2DSolver, self).__init__(tuple(start), tuple(
             goal), allowed_states, forbidden_states, visited_queue)
         self.diagonal_enabled = diagonal_enabled
-        self.start_state = self.__get_start_state()
+        self.start_state = self.get_start_state()
 
-    def __get_start_state(self) -> State2DMovement:
+    def get_start_state(self) -> State2DMovement:
         """Get the starting state object for this solver."""
 
-        return State2DMovement(self.start, 0, self.diagonal_enabled, self.start, self.goal)
+        return State2DMovement(self.start, 0, self.start, self.goal, self.diagonal_enabled)
 
 
 def StringSolver_example():
@@ -377,7 +389,7 @@ def StringSolver_example():
     for char in temp:
         start += char
     a = StringSolver(start, goal)
-    a.Solve()
+    a.solve()
     for num, step in enumerate(a.path):
         print(str(num) + ": " + str(step))
     print("Time Taken: " + str(a.time_taken))
@@ -391,7 +403,7 @@ def Movement2DSolver_example():
     forbidden_states = []
     a = Movement2DSolver(start, goal, True, allowed_states,
                          forbidden_states)
-    a.Solve()
+    a.solve()
     for num, step in enumerate(a.path):
         print(str(num) + ": " + str(step))
     print("Time Taken: " + str(a.time_taken))

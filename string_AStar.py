@@ -48,11 +48,11 @@ def submit_action():
 
     # Create the sovler object, and initiate the solving process
     try:
-        a = AStar.StringSolver(start, goal)
-        a.Solve()
-        path = a.path
-        time_taken = a.time_taken
-        nodes_considered = a.nodes_considered
+        solver = AStar.StringSolver(start, goal)
+        solver.solve()
+        path = solver.path
+        time_taken = solver.time_taken
+        nodes_considered = solver.nodes_considered
     except:
         path = ["No path"]
 
