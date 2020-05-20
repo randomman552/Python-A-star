@@ -184,6 +184,8 @@ class MapCreationWindow(object):
     def reset(self):
         """Reset the object to its default state"""
 
+        # This variable is used to itterate the navigation node number, so that the order of placement can be found.
+        self.node_num = 0
         self.Process = None
         self.shared_memory = self.Manager.dict({
             "visited": set(),
@@ -219,9 +221,10 @@ class MapCreationWindow(object):
                 # If user left clicks on a tile, hide it
                 if mouse_presses[0]:
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 1
-                # If a user middle clicks on the tile, make it into a nav node.
+                # If a user middle clicks on the tile, make it into a nav node, add the node_num to store the order of placement
                 elif mouse_presses[1]:
-                    self.__tiles[tile_pos[0]][tile_pos[1]] = 2
+                    self.__tiles[tile_pos[0]][tile_pos[1]] = 2 + self.node_num
+                    self.node_num += 1
                 # If a user right clicks on a tile, reset it to the default state
                 elif mouse_presses[2]:
                     self.__tiles[tile_pos[0]][tile_pos[1]] = 0
@@ -289,6 +292,10 @@ class MapCreationWindow(object):
                 self.updated_tiles = forbidden_set.copy()
                 self.updated_tiles = self.updated_tiles.union(nav_nodes)
 
+                # Sort the nav_nodes list to obtain the order of them.
+                nav_nodes = sorted(
+                    nav_nodes, key=lambda coords: self.__tiles[coords[0]][coords[1]])
+
                 # Create and start process
                 self.Process = AStar_multiprocessing.Movement2DProcess(
                     nav_nodes[0], nav_nodes[1], self.shared_memory, allowed_set, forbidden_set, self.diagonal_enabled)
@@ -326,14 +333,14 @@ class MapCreationWindow(object):
                 for y in range(len(column)):
 
                     # The tile value is treated as its mode.
-                    # A value of 0 is normal, 1 is disabled and 2 is start or end node.
+                    # A value of 0 is normal, 1 is disabled and anything >= 2 is start or end node.
                     # -1 means they have been visited by the algorithm, and -2 means they are part of the found path.
                     tile_value = column[y]
                     color = (255, 255, 255)
 
                     if tile_value == 1:
                         color = (255, 128, 128)
-                    elif tile_value == 2:
+                    elif tile_value >= 2:
                         color = (255, 128, 255)
                     elif tile_value == -1:
                         color = (128, 128, 255)
