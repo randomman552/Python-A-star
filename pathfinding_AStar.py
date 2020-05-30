@@ -20,6 +20,9 @@ class DefineSettings(object):
         # Window - The tkinter display window.
         self.window = tk.Tk()
 
+        # Attach the exit command to the WM_DELETE_WINDOW event (causes program to close correctly)
+        self.window.protocol("WM_DELETE_WINDOW", self.__quit)
+
         # If Settings is equal to none, then load some default settings.
         if settings == None:
             self.settings = {
