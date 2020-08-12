@@ -8,7 +8,7 @@
 pip install pygame
 ```
 
-## Execution
+## Usage
 - You can then run the script using the terminal:
     - For the pathfinding example:
     ```
@@ -16,5 +16,10 @@ pip install pygame
     ```
     - For the string reorganisation example:
     ```
-    python string_Astar.py
+    python string_AStar.py
     ```
+
+### Controls (for pathfinding example)
+- Middle click creates a navigation node.
+- Left click creates an impassable tile.
+- Enter begins the pathfinding process.
